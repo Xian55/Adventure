@@ -5,3 +5,10 @@
 *.ilk
 .vs/
 CMakeUserPresets.json
+
+# Assets kept local for now (per request). Keep the directory skeleton (.gitkeep) so the
+# build's copy_assets step works on a fresh clone, but do not commit the actual asset files.
+# maps/ stays tracked — .map files are level source, not binary assets.
+/assets/**
+!/assets/**/
+!/assets/**/.gitkeep
