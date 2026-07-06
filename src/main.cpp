@@ -6,6 +6,9 @@
 #include "core/ProfileReport.h"
 #include "render/Renderer.h"
 #include "render/MetricsOverlay.h"
+#include "render/WorldRenderer.h"
+#include "world/BrushGeometry.h"
+#include "world/MapParser.h"
 #include "lua/ScriptEngine.h"
 
 #include <entt/entt.hpp>
@@ -63,6 +66,18 @@ int main()
 
 	const Color fog = Color{26, 28, 40, 255}; // dark gothic haze
 
+	WorldRenderer world;
+	{
+		char* text = LoadFileText("maps/box.map");
+		world::MapParseResult mp = world::parseMap(text ? text : "");
+		if (text)
+			UnloadFileText(text);
+		world::WorldGeometry geo = world::buildWorld(mp.data);
+		world.load(geo);
+		world.setFog(fog, 0.18f);
+		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes", (int)geo.meshes.size(), (int)geo.collision.size());
+	}
+
 	// M0 verification hook: ADVENTURE_SHOT=<name> writes a screenshot after a few frames and exits.
 	const char* shotPath = getenv("ADVENTURE_SHOT");
 	int frame = 0;
@@ -100,13 +115,10 @@ int main()
 			Metrics::Scope s(metrics, "scene");
 			renderer.beginScene(fog);
 			BeginMode3D(cam);
+			world.draw(cam.position);
 			DrawGrid(20, 1.0f);
-			DrawCube(Vector3{0, 0.5f, 0}, 1.5f, 1.0f, 1.5f, MAROON);
-			DrawCubeWires(Vector3{0, 0.5f, 0}, 1.5f, 1.0f, 1.5f, Color{210, 130, 130, 255});
-			DrawCube(Vector3{2.6f, 0.4f, -1.2f}, 0.8f, 0.8f, 0.8f, DARKBLUE);
-			DrawCube(Vector3{-2.4f, 0.3f, 1.4f}, 0.6f, 0.6f, 0.6f, DARKGREEN);
 			EndMode3D();
-			DrawText("ADVENTURE  M0", 6, 6, 20, RAYWHITE);
+			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
 		}
 
@@ -153,6 +165,7 @@ int main()
 		}
 	}
 
+	world.unload();
 	renderer.shutdown();
 	sScript->shutdown();
 	CloseWindow();

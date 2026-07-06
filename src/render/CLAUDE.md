@@ -5,7 +5,8 @@ Everything that draws. raylib lives here.
 | File | Responsibility |
 |------|----------------|
 | `Renderer.{h,cpp}` | Low-res pipeline: `beginScene` → (caller draws in `BeginMode3D`) → `endScene` → `postProcess` (palette+dither shader) → `blit` (point-upscale to window). |
-| `Shaders.h` | Inline GLSL (GL330). Post shader = palette quantize + Bayer 4×4 dither, indexed by low-res texel. |
+| `Shaders.h` | Inline GLSL (GL330). Post shader = palette quantize + Bayer 4×4 dither. World shader = textured + vertex-light + exp2 distance fog + alpha-test discard. |
+| `WorldRenderer.{h,cpp}` | Uploads `world::WorldGeometry` (per-texture `MeshData`) to raylib meshes + the world shader; `draw(camPos)` sets fog/camera uniforms. Missing texture PNG → a generated checker placeholder (assets are local/optional). |
 | `MetricsOverlay.{h,cpp}` | Draws a `Metrics` snapshot at native res. Presentation only; reads, never mutates. |
 
 ## Pipeline notes (gotchas)
@@ -16,6 +17,6 @@ Everything that draws. raylib lives here.
 - `main` owns `BeginDrawing`/`EndDrawing` around `blit` so it can draw native-res HUD/overlay on top.
 
 ## Coming (M1/M2)
-`Billboard` (Y-axis camera-facing sprite quads, depth-sorted), `Viewmodel` (rlgl torch+sword overlay,
-depth-test off), `Frustum` (Gribb-Hartmann cull). Enemies use a `RenderKind` seam: billboard now, 3D model
-later — the swap should touch only the render system.
+`Viewmodel` (rlgl torch+sword overlay, depth-test off), `Billboard` (Y-axis camera-facing sprite quads,
+depth-sorted), `Frustum` (Gribb-Hartmann cull). WorldRenderer will gain per-mesh frustum culling as maps
+grow. Enemies use a `RenderKind` seam: billboard now, 3D model later — the swap touches only the render side.

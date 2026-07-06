@@ -2,8 +2,8 @@
 
 GRAVEN-style first-person dark-fantasy melee game. raylib 5.5 + C++17, gameplay scripted in sandboxed Lua.
 Retro look = low-res render + point upscale + fog + dither. Status: **M0 done**; **M1 in progress** —
-`.map` (Valve 220) parse + brush→convex geometry/collision core landed (`src/world`); next M1: render the
-world, Quake movement + brush collision, viewmodel.
+`.map` (Valve 220) parse + brush→convex geometry/collision (`src/world`) and world rendering (textured +
+vertex-light + fog, `render/WorldRenderer`) landed; next M1: Quake movement + AABB-vs-brush collision, viewmodel.
 
 ## Commands
 ```bash

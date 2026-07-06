@@ -68,4 +68,7 @@ namespace adventure::world
 		std::vector<MeshData> meshes;          // grouped by texture
 		std::vector<CollisionBrush> collision; // one per solid brush
 	};
+
+	// Map space (Z-up) -> engine space (Y-up) with map scale. For placing entities read from a map.
+	Vector3 mapToEngine(Vector3 mapPoint);
 } // namespace adventure::world

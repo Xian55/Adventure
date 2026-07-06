@@ -188,4 +188,9 @@ namespace adventure::world
 				buildBrush(b, world);
 		return world;
 	}
+
+	Vector3 mapToEngine(Vector3 mapPoint)
+	{
+		return toEngine(mapPoint);
+	}
 } // namespace adventure::world
