@@ -23,6 +23,8 @@ set(ADVENTURE_LIB_SOURCES
     src/core/Platform.cpp
     src/core/Metrics.cpp
     src/core/ProfileReport.cpp
+    src/world/MapParser.cpp
+    src/world/BrushGeometry.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/lua/ScriptEngine.cpp
@@ -68,6 +70,8 @@ add_executable(adventure_tests
     tests/test_scriptengine.cpp
     tests/test_metrics.cpp
     tests/test_profilereport.cpp
+    tests/test_mapparser.cpp
+    tests/test_brushgeometry.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)
 add_test(NAME adventure_tests COMMAND adventure_tests)
@@ -77,6 +81,7 @@ add_executable(adventure_bench
     bench/bench_main.cpp
     bench/bench_lua.cpp
     bench/bench_metrics.cpp
+    bench/bench_world.cpp
 )
 target_include_directories(adventure_bench PRIVATE bench)
 target_link_libraries(adventure_bench PRIVATE adventure_lib)

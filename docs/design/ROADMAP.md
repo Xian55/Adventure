@@ -6,7 +6,7 @@ behaviour, verifiable end-to-end (run the game / run the tests), not just compil
 | # | Milestone | Goal | Status |
 |---|-----------|------|--------|
 | **M0** | Scaffold + pipeline | CMake (raylib/EnTT/Lua wired, MinGW+MSVC), window, fixed-step loop, low-res RT + point upscale + palette/dither post, Lua sandbox boots + `selfTest`, **instrumentation (F3 metrics)**, **test harness (doctest)**. | ✅ done |
-| **M1** | Movement + world | `.map` (TrenchBroom) parse → brush meshes + collision planes, Quake-accel first-person controller, AABB-vs-brush collision, torch+sword viewmodel. *Walk a pixelated room with fluid movement.* | next |
+| **M1** | Movement + world | `.map` (TrenchBroom) parse → brush meshes + collision planes, Quake-accel first-person controller, AABB-vs-brush collision, torch+sword viewmodel. *Walk a pixelated room with fluid movement.* | in progress — parse + brush→convex geometry/collision core done (`src/world`); render + movement + viewmodel next |
 | **M2** | Combat slice (**target**) | Melee swing state machine + sweeping hitbox, kick knockback, shield block, one skeleton (approach/attack/stagger/die), arena script, `trigger_hurt` hazard kill. **Nail the feel.** | |
 | M3 | Inventory + pickups + HUD | Weapon/item pickups, hotbar/equip, Lua-driven HUD. | |
 | M4 | RPG stats | Health/stamina/attributes, damage formulas, loadout. | |

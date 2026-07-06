@@ -1,8 +1,9 @@
 # CLAUDE.md — Adventure
 
 GRAVEN-style first-person dark-fantasy melee game. raylib 5.5 + C++17, gameplay scripted in sandboxed Lua.
-Retro look = low-res render + point upscale + fog + dither. Status: **M0 done** (engine skeleton, Lua
-sandbox, instrumentation, tests, perf gate, CI). Next: **M1** (TrenchBroom `.map` + Quake movement).
+Retro look = low-res render + point upscale + fog + dither. Status: **M0 done**; **M1 in progress** —
+`.map` (Valve 220) parse + brush→convex geometry/collision core landed (`src/world`); next M1: render the
+world, Quake movement + brush collision, viewmodel.
 
 ## Commands
 ```bash
@@ -15,12 +16,16 @@ ADVENTURE_PROFILE=300 ./adventure.exe                               # headless p
 ADVENTURE_SHOT=shot.png ./adventure.exe                             # one-shot screenshot, then exit
 ```
 Skills automate these: `adv-feature` (full loop), `adv-build`, `adv-test`, `adv-new-module`, `adv-format`,
-`adv-docs`.
+`adv-docs`, `adv-map` (.map format authority), `adv-sprite` (Aseprite export), `adv-onboard` (new-contributor
+setup).
 
 ## Layout
-`src/` game code (built into `adventure_lib`; thin `src/main.cpp`) · `tests/` doctest · `bench/` perf gate ·
-`scripts/` Lua · `maps/` `.map` levels · `assets/` local PNGs (gitignored) · `deps/` vendored minilua +
-LuaBridge · `docs/design/` the design docs. Each `src/<subsystem>/` has its own `CLAUDE.md`.
+`src/` game code (built into `adventure_lib`; thin `src/main.cpp`) — subsystems `core/ render/ lua/ world/` ·
+`tests/` doctest · `bench/` perf gate · `scripts/` Lua · `maps/` `.map` levels · `assets/` local PNGs
+(gitignored) · `deps/` vendored minilua + LuaBridge · `docs/design/` the design docs. Each
+`src/<subsystem>/` has its own `CLAUDE.md`.
+
+Tooling env vars: `ASEPRITE` (Aseprite.exe path — used by `adv-sprite`).
 
 ## Conventions (enforced — see docs/design/CONVENTIONS.md)
 - **Style is machine-enforced** by `.clang-format` (CI gate). Tabs, Allman (lambdas inline), `m_` members,

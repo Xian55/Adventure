@@ -75,9 +75,10 @@ for f in inbox/*.png; do
 done
 ```
 
-**Aseprite CLI** (batch-export sprite sheets from `.aseprite` sources):
+**Aseprite CLI** (batch-export sprite sheets from `.aseprite` sources). Referenced via the **`ASEPRITE`**
+env var (machine-independent) — see the `adv-sprite` skill:
 ```bash
-aseprite -b sprites_src/skeleton.aseprite \
+"$ASEPRITE" -b sprites_src/skeleton.aseprite \
   --sheet assets/sprites/skeleton.png --data assets/sprites/skeleton.json \
   --sheet-type packed --list-tags
 ```

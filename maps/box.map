@@ -1,0 +1,20 @@
+// Game: Adventure
+// Format: Valve
+// M1 smoke map: a single 128-unit cube brush + a player start. Winding-agnostic (engine orients
+// normals outward), so faces are authored with any 3 points on each plane.
+{
+"classname" "worldspawn"
+{
+( -64 -64 -64 ) ( -64 -64 64 ) ( -64 64 -64 ) stone_wall_01 [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 64 64 64 ) ( 64 -64 64 ) ( 64 64 -64 ) stone_wall_01 [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -64 -64 -64 ) ( 64 -64 -64 ) ( -64 -64 64 ) stone_wall_01 [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 64 64 64 ) ( -64 64 64 ) ( 64 64 -64 ) stone_wall_01 [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -64 -64 -64 ) ( -64 64 -64 ) ( 64 -64 -64 ) floor_tile_01 [ 1 0 0 0 ] [ 0 1 0 0 ] 0 1 1
+( 64 64 64 ) ( 64 -64 64 ) ( -64 64 64 ) floor_tile_01 [ 1 0 0 0 ] [ 0 1 0 0 ] 0 1 1
+}
+}
+{
+"classname" "info_player_start"
+"origin" "0 0 128"
+"angle" "90"
+}
