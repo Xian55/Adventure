@@ -49,7 +49,8 @@ endif()
 # The LuaBridge + minilua-decls TU is large; give it a big object-file section.
 if(MSVC)
     set_source_files_properties(src/lua/Bindings.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
-else()
+elseif(MINGW)
+    # -Wa,-mbig-obj is a COFF/PE (Windows) assembler flag; ELF (Linux/macOS) has no 64k-section limit.
     set_source_files_properties(src/lua/Bindings.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
 endif()
 
