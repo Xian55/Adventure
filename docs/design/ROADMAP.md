@@ -13,7 +13,7 @@ behaviour, verifiable end-to-end (run the game / run the tests), not just compil
 | M5 | Ranged + spells | Crossbow projectiles, data-driven spell system. | |
 | M6 | Quests + triggers | `trigger_*` → Lua events, objectives, doors/keys, puzzles. | |
 | M7 | Arenas + secrets | Encounter waves, hidden areas, verticality. | |
-| M8 | Content breadth | More enemies/weapons/maps; swap billboard enemies → 3D animated models behind the `RenderKind` seam. | |
+| M8 | Content breadth | More enemies/weapons/maps; swap billboard enemies → 3D animated models behind the `RenderKind` seam; **Recast/Detour navmesh pathfinding** as levels grow beyond one room (see ARCHITECTURE). | |
 | M9 | Multiplayer | Co-op authority model (binary protocol + snapshot interpolation). | |
 
 ## Rendering decision (locked)

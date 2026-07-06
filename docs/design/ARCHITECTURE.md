@@ -59,6 +59,15 @@ per-section CPU time via RAII `Metrics::Scope`. Wrap any suspect block in a scop
 { Metrics::Scope s(metrics, "ai"); runAI(...); }
 ```
 
+## Pathfinding (planned) — Recast & Detour
+**Decision:** enemy navigation uses **recastnavigation** (Recast for navmesh generation, Detour for runtime
+queries), added via `FetchContent`. Bake a navmesh from the level triangle soup (`BrushGeometry`'s render
+meshes) at map load, with agent radius/height/climb derived from the player/enemy collider dims. `AISystem`
+queries `dtNavMeshQuery` (findPath / wall-follow) and feeds the corridor to enemy steering. Throttle queries
+per enemy (`thinkTimer`), cache the path, and wrap the query in `Metrics::Scope("ai.path")` with a bench
+budget. Lands when enemies need real navigation (multi-room / obstacle avoidance, ~M6); the M2 skeleton uses
+simple direct steering in one room and needs no navmesh.
+
 ## Levels (TrenchBroom `.map`) — arrives M1
 Quake **Valve 220** brushes = convex intersections of face half-spaces. Parse → clip faces → per-texture
 meshes (render) + face planes (collision). Entities (`info_player_start`, `monster_skeleton`,
