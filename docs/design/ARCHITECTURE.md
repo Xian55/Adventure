@@ -59,6 +59,27 @@ per-section CPU time via RAII `Metrics::Scope`. Wrap any suspect block in a scop
 { Metrics::Scope s(metrics, "ai"); runAI(...); }
 ```
 
+## World space partitioning (planned, measured-in)
+Currently the world is a **flat** list of per-texture meshes + convex collision brushes — correct and fast
+at M1 scale (one room, sub-millisecond). We add structure **only when the profiler/bench shows the flat
+approach costing**, not before. The staged plan:
+1. **Per-mesh frustum culling** (Gribb-Hartmann, cheap, general) — the first and often sufficient win; each
+   merged mesh has an AABB, skip meshes outside the view.
+2. **Collision broadphase** — for movement, test the player AABB only against brushes whose AABB overlaps a
+   swept query box. Start as a linear filter over the flat list (fine for small maps), wrapped in a
+   `Metrics::Scope("collision.broad")` + a bench so the cost is visible.
+3. **A BVH or uniform grid over brush/mesh AABBs** — introduce when (2)/(1) show O(n) hurting on bigger
+   maps. A BVH is the general choice (non-uniform density); a uniform grid is the simplest. Built once at
+   map load.
+4. **Portal/sector visibility** (indoor occlusion) — the natural GRAVEN-style approach: author rooms +
+   portal brushes in TrenchBroom, render only the current + portal-visible sectors. More impactful indoors
+   than a tree, and no offline compiler.
+
+**Not BSP/PVS** (the Quake pipeline): our winding-robust convex-brush geometry + a runtime BVH/grid +
+portals gets the same collision/culling wins without a heavy offline `qbsp` compiler. Revisit only if we
+specifically want that toolchain. Guiding rule: **measure, then partition** — the instrumentation exists so
+this is a data-driven call.
+
 ## Pathfinding (planned) — Recast & Detour
 **Decision:** enemy navigation uses **recastnavigation** (Recast for navmesh generation, Detour for runtime
 queries), added via `FetchContent`. Bake a navmesh from the level triangle soup (`BrushGeometry`'s render
