@@ -2,14 +2,37 @@
 #include "lua/ScriptEngineImpl.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <string>
 
 namespace adventure
 {
-	static constexpr int kHookStep = 1000;                // watchdog granularity (VM instructions)
-	static constexpr long long kInstrBudget = 20'000'000; // per-chunk instruction ceiling
+	static constexpr int kHookStep = 1000;                    // watchdog granularity (VM instructions)
+	static constexpr long long kInstrBudget = 20'000'000;     // per-chunk instruction ceiling
+	static constexpr std::size_t kMemCap = 64u * 1024 * 1024; // VM heap ceiling (bytes)
+
+	// Custom Lua allocator with a hard cap: returns NULL past the cap so Lua raises "not enough
+	// memory" (caught by pcall) instead of a script exhausting the process.
+	static void* luaAlloc(void* ud, void* ptr, std::size_t osize, std::size_t nsize)
+	{
+		ScriptEngineImpl* impl = static_cast<ScriptEngineImpl*>(ud);
+		if (nsize == 0)
+		{
+			std::free(ptr);
+			if (ptr)
+				impl->memUsed -= osize;
+			return nullptr;
+		}
+		std::size_t next = impl->memUsed - (ptr ? osize : 0) + nsize;
+		if (impl->memCap && next > impl->memCap)
+			return nullptr; // over cap -> allocation fails
+		void* np = std::realloc(ptr, nsize);
+		if (np)
+			impl->memUsed = next;
+		return np;
+	}
 
 	// Stash the impl pointer in the lua_State's extraspace so the C hook can reach it.
 	static ScriptEngineImpl*& implSlot(lua_State* L)
@@ -112,7 +135,9 @@ namespace adventure
 		if (m_impl->L)
 			return;
 
-		lua_State* L = luaL_newstate();
+		m_impl->memUsed = 0;
+		m_impl->memCap = kMemCap;
+		lua_State* L = lua_newstate(luaAlloc, m_impl.get(), 0); // seed 0: deterministic string hashing
 		m_impl->L = L;
 		implSlot(L) = m_impl.get();
 

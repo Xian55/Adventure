@@ -77,6 +77,7 @@ add_executable(adventure_tests
     tests/test_brushgeometry.cpp
     tests/test_collisionworld.cpp
     tests/test_playercontroller.cpp
+    tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)
 add_test(NAME adventure_tests COMMAND adventure_tests)

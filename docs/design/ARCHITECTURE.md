@@ -36,6 +36,13 @@ Fixed-timestep update order (60 Hz; render at display rate):
 `Input → PlayerMove → AI → Combat → Physics → Render`. Lua `onFrame(dt)` (arena scripts) runs between AI
 and Combat.
 
+## Determinism (deferred, for future co-op)
+The sim is fixed-timestep (60 Hz) — a good base for a deterministic lockstep netcode later. We are **not**
+enforcing strict determinism yet (it's an M9 concern), but we keep the door open cheaply: movement/collision
+take no wall-clock (dt is passed in), the Lua VM seeds string hashing to 0, and tests use injected clocks.
+If co-op stays a goal, the expensive-to-retrofit risks to watch are float order-of-operations, container
+iteration order, and uninitialized reads (the last is why the ASan CI job matters). Revisit before M9.
+
 ## Rendering pipeline
 Scene → **low-res RenderTexture** (480×270) → **post RT** (palette quantize + Bayer 4×4 dither, indexed by
 low-res texel so the dither stays coarse) → **point-filter upscale** to the framebuffer. World fog is

@@ -50,3 +50,33 @@ jobs:
       # Runs the doctest unit suite AND the adventure_bench perf gate (fails on budget breach).
       - name: Test + perf gate
         run: ctest --test-dir build/ci -C Release --output-on-failure
+
+  sanitizers:
+    # Run the headless tests under AddressSanitizer + UndefinedBehaviorSanitizer. The tests exercise our
+    # own code + minilua + doctest (no window, no raylib calls), so dep instrumentation stays dormant.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install raylib build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libx11-dev libxrandr-dev libxi-dev \
+            libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/asan/_deps
+          key: asan-deps-${{ runner.os }}-${{ hashFiles('cmake/deps.cmake') }}
+      - name: Configure (ASan + UBSan)
+        run: >
+          cmake -S . -B build/asan -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build tests
+        run: cmake --build build/asan --target adventure_tests
+      - name: Run tests under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build/asan -C Debug --output-on-failure -R adventure_tests

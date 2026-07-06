@@ -12,9 +12,11 @@ Sandboxed Lua scripting. VM = vendored minilua (Lua 5.5); binding = LuaBridge3.
 - Chunks run under a whitelisted `_ENV`; `_G`, `io`, `os.execute`, `require`, `load`, `dofile`, `debug`,
   `package` are absent. `os` exposes only time helpers.
 - Chunks load as **text only** (`"t"`) — bytecode rejected. Instruction-count watchdog (`lua_sethook`)
-  kills runaway loops. Every untrusted call crosses `lua_pcall`.
-- `selfTest()` asserts all of the above on boot; `tests/test_scriptengine.cpp` locks it in. If you touch
-  `buildSandbox`, keep the tests green.
+  kills runaway loops. A **capped allocator** (`lua_newstate` custom `lua_Alloc`, 64 MB) makes a memory
+  bomb raise "not enough memory" instead of exhausting the process. Every untrusted call crosses `lua_pcall`.
+- The sandbox is a **security boundary** — `tests/test_sandbox.cpp` adversarially tries to escape it
+  (reach `_G`/`io`/loaders, infinite loop, memory bomb) and asserts containment. `selfTest()` re-checks on
+  boot. If you touch `buildSandbox`/the allocator/watchdog, keep both test files green.
 
 ## Extending (the C++/Lua boundary)
 - Keep LuaBridge confined to `Bindings.cpp`. Never expose `entt::registry` or raw pointers to Lua — pass a

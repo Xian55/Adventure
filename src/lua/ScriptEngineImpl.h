@@ -2,6 +2,8 @@
 
 // Shared internal state for the Lua engine. Included by ScriptEngine.cpp (core, raw C API) and
 // Bindings.cpp (the LuaBridge boundary). NOT a public header — never included by gameplay code.
+#include <cstddef>
+
 extern "C"
 {
 #include "lua.h"
@@ -19,6 +21,11 @@ namespace adventure
 		bool instrArmed = false;
 		long long instrCount = 0;
 		long long instrBudget = 0;
+
+		// Memory cap: the custom allocator fails allocations past memCap, so Lua raises "not enough
+		// memory" (caught by pcall) instead of a script exhausting the process.
+		std::size_t memUsed = 0;
+		std::size_t memCap = 0;
 
 		int sandboxRef = LUA_NOREF; // registry ref to the whitelisted _ENV table
 	};

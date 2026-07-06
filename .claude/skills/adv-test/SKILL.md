@@ -40,6 +40,20 @@ targets — they catch regressions.
 To profile the real render loop headlessly: `ADVENTURE_PROFILE=300 ./adventure.exe` writes `profile.csv`
 (frame avg/p50/p95/max, RSS, Lua bytes, per-section ms).
 
+## Sanitizers (ASan + UBSan)
+CI runs the headless tests under AddressSanitizer + UndefinedBehaviorSanitizer (Linux/gcc) — the net that
+catches use-after-free / UB our unit tests can't. To reproduce locally on Linux/WSL:
+```bash
+cmake -S . -B build/asan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all" \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+cmake --build build/asan --target adventure_tests
+ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/asan -R adventure_tests --output-on-failure
+```
+The Lua sandbox is a security boundary — `tests/test_sandbox.cpp` adversarially tries to escape/exhaust it;
+keep it green when touching `src/lua`.
+
 ## Notes
 - MinGW binaries statically link the GCC/libstdc++/winpthread runtimes; if a run ever fails with
   `0xc0000139` (entrypoint not found), a wrong runtime DLL is on PATH — the static link should prevent it.

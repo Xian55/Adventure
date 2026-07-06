@@ -13,15 +13,33 @@ world or **crafted from raw materials**.
 - Data-driven in Lua: chest contents, loot tables, recipes, lock/key ids.
 
 ## Dark Messiah–style skill / talent points (→ M4 RPG stats)
-A lightweight talent system inspired by *Dark Messiah of Might & Magic*: earn **skill points** at
-progression milestones and spend them across a few trees.
-- Sketch (to refine against the DM reference — the shared namu.wiki page 403'd, paste specifics to pin down):
-  three small trees — **Combat** (weapon mastery, power attacks, health/stamina, block/parry),
-  **Magic** (unlock/upgrade spells: fire, lightning, freeze, telekinesis, heal), **Stealth/Utility**
-  (assassination, lockpicking → ties into chest keys, agility). Modest node count; meaningful choices
-  (can't max everything). Tiered prerequisites; per-node caps.
-- Data-driven: define trees/nodes/costs in Lua; C++ holds the earned/spent state + applies stat effects.
-- Ties in: lockpicking node ↔ locked chests above; weapon mastery ↔ M2 melee; spells ↔ M5.
+A lightweight talent system modelled on *Dark Messiah of Might & Magic*. Distilled from the DM reference:
+
+**Earning points** — from **quests** and **discovering hidden locations** (not XP grinding). This directly
+rewards our exploration/secrets pillar. Spend points to unlock/upgrade nodes; some nodes **gate equipment**.
+
+**Three trees** (numbers are DM's, as a starting balance reference):
+- **Combat** — *Close Combat* L1/L2/L3 (1/2/4 pts: combos+charge → shield use + disarm → jump/spin/defense-
+  break); *Archery* L1/L2/L3 (1/2/4: zoom → steady aim → fire rate); *Mighty Power* (6/8/10 → +2/3/6 weapon
+  damage, **gates mid/late weapons**); *Critical* (6/8 → +2/4% double-dmg); *Adrenaline* (12 → two adrenaline
+  bars, empowered attacks).
+- **Magic** (a spell = two-handed, cancels shield; except Darkvision/Heal). *Attack*: Flame Arrow(1),
+  Flame Trap(2), Freeze(3), Fireball(7), Lightning(7), Hellfire(10). *Utility*: **Telekinesis(1)** (gravity-
+  gun — pull/throw objects; **ties to our physics/kick environmental kills** + reaching secrets), Heal(3),
+  Charm(3), Sanctuary(7, invuln), Weaken(10). Darkvision = free vision mode.
+- **Other** — *Body*: Endurance(1, stamina), Health(4/7/10 → 60/70/80, **gates warrior armor**), Poison
+  Resist(6), Stamina Regen(12). *Mind/Tech*: **Navigation(1)** (idle → secret switches/doors glow; **ties to
+  hidden areas**), Mana Affinity(2/5/10 → 40/70/100, **gates mage gear**), Mana Regen(12), *Stealth* L1/L2/L3
+  (1/4/10: quiet+pickpocket → backstab → full hide; **gates thief gear**), **Lockpicking(8)** (open locked
+  doors/chests, reveal traps; **ties to the locked-chest/key feature above**).
+
+**Weapons/gear as data** (fits the `WeaponDef` Lua plan): each item = attack power + skill requirement +
+optional special (double-damage vs a faction/type, elemental status like freeze/shock/burn). Classes: daggers
+(fast, backstab), swords (best all-round, shield-compatible), bows (stealth ranged), shields (block ranged,
+require Combat skill), staves (slow AoE stun, no shield), armor (defense + skill gate), rings (one slot).
+
+**Our lightweight cut**: keep the tree shape + gating + quest/secret point income, trim the node count. All
+trees/nodes/costs/effects and weapon defs live in **Lua**; C++ holds earned/spent state + applies effects.
 
 ## Notes
 - These reinforce the existing plan (M3 inventory, M4 stats, M5 spells) rather than adding new pillars.
