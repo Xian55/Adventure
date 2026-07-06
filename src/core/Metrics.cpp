@@ -8,7 +8,7 @@ namespace adventure
 {
 	namespace
 	{
-		constexpr float kEma = 0.1f;              // smoothing factor for display values
+		constexpr float kEma = 0.1f;               // smoothing factor for display values
 		constexpr double kSysSampleInterval = 0.5; // seconds between OS mem/cpu samples
 		constexpr double kMaxWindow = 1.0;         // seconds for the frame-time max window
 
@@ -18,10 +18,10 @@ namespace adventure
 			static const auto t0 = clock::now();
 			return std::chrono::duration<double>(clock::now() - t0).count();
 		}
-	}
+	} // namespace
 
 	Metrics::Metrics()
-		: m_clock(&steadyNowSeconds)
+	    : m_clock(&steadyNowSeconds)
 	{
 	}
 
@@ -56,7 +56,7 @@ namespace adventure
 		Section* s = find(name);
 		if (!s)
 		{
-			m_sections.push_back(Section{ name, 0.0, 0.0, 0.0f });
+			m_sections.push_back(Section{name, 0.0, 0.0, 0.0f});
 			s = &m_sections.back();
 		}
 		s->startT = m_clock();
@@ -77,7 +77,8 @@ namespace adventure
 		m_frameMs = m_frameMs + kEma * (m_frameMsRaw - m_frameMs);
 
 		// Rolling worst-case frame time (spike detector).
-		if (m_frameMsRaw > m_frameMsMax) m_frameMsMax = m_frameMsRaw;
+		if (m_frameMsRaw > m_frameMsMax)
+			m_frameMsMax = m_frameMsRaw;
 		if (now - m_windowStart >= kMaxWindow)
 		{
 			m_frameMsMaxShown = m_frameMsMax;
@@ -92,7 +93,7 @@ namespace adventure
 		{
 			const float raw = (float)(s.accum * 1000.0);
 			s.smoothMs = s.smoothMs + kEma * (raw - s.smoothMs);
-			m_view.push_back(SectionView{ s.name, s.smoothMs, raw });
+			m_view.push_back(SectionView{s.name, s.smoothMs, raw});
 		}
 
 		// Sample OS-level metrics infrequently (they are relatively expensive).
@@ -108,4 +109,4 @@ namespace adventure
 	{
 		return m_frameMs > 0.0001f ? 1000.0f / m_frameMs : 0.0f;
 	}
-}
+} // namespace adventure

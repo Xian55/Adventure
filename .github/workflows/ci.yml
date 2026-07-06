@@ -10,6 +10,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: pipx install clang-format==19.1.5
+      - name: Check formatting
+        run: |
+          files=$(git ls-files 'src/*.cpp' 'src/*.h' 'tests/*.cpp' 'bench/*.cpp' 'bench/*.h')
+          clang-format --dry-run --Werror $files
+
   build-test:
     runs-on: windows-latest
     steps:

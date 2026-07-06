@@ -52,11 +52,13 @@ Run in order; fix and re-run on any failure:
    *regression* vs the previous `profile.csv`). Report the before/after numbers.
 4. **Visual verify** — if it renders or changes feel, use `adv-build` to screenshot and confirm it looks
    right. For feel, iterate constants in `scripts/tuning.lua` (hot-reload), not C++.
+5. **Format** — `adv-format` (clang-format check clean). CI enforces this too.
 
-## 7. Self-review, then commit
+## 7. Self-review, update docs, commit
 Check: correct? within perf budget? SRP seams held? no `entt::` leak into Lua/render? sandbox not widened?
-docs updated (roadmap status, any new design note)? Then commit with a clear message (what + why +
-before/after perf if relevant) and, if the user asked, push.
+comments lean (no walls)? Then **update docs** with `adv-docs` (the subsystem `CLAUDE.md`, root `CLAUDE.md`,
+and `docs/design/` for anything that changed). Commit with a clear message (what + why + before/after perf if
+relevant) and, if the user asked, push.
 
 ## Performance philosophy
 Instrumented from day one — measure, don't guess. Every hot path is timed (`Metrics::Scope`), gated

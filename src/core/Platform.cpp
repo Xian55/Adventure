@@ -20,8 +20,8 @@ namespace adventure::platform
 
 	float processCpuPercent()
 	{
-		static ULONGLONG lastWall = 0;   // 100ns ticks
-		static ULONGLONG lastCpu  = 0;
+		static ULONGLONG lastWall = 0; // 100ns ticks
+		static ULONGLONG lastCpu = 0;
 		static int cores = 0;
 
 		if (cores == 0)
@@ -29,7 +29,8 @@ namespace adventure::platform
 			SYSTEM_INFO si{};
 			GetSystemInfo(&si);
 			cores = (int)si.dwNumberOfProcessors;
-			if (cores < 1) cores = 1;
+			if (cores < 1)
+				cores = 1;
 		}
 
 		FILETIME ftCreate, ftExit, ftKernel, ftUser;
@@ -37,35 +38,44 @@ namespace adventure::platform
 			return 0.0f;
 
 		ULARGE_INTEGER k, u;
-		k.LowPart = ftKernel.dwLowDateTime; k.HighPart = ftKernel.dwHighDateTime;
-		u.LowPart = ftUser.dwLowDateTime;   u.HighPart = ftUser.dwHighDateTime;
+		k.LowPart = ftKernel.dwLowDateTime;
+		k.HighPart = ftKernel.dwHighDateTime;
+		u.LowPart = ftUser.dwLowDateTime;
+		u.HighPart = ftUser.dwHighDateTime;
 		const ULONGLONG cpu = k.QuadPart + u.QuadPart;
 
 		FILETIME ftNow;
 		GetSystemTimeAsFileTime(&ftNow);
 		ULARGE_INTEGER w;
-		w.LowPart = ftNow.dwLowDateTime; w.HighPart = ftNow.dwHighDateTime;
+		w.LowPart = ftNow.dwLowDateTime;
+		w.HighPart = ftNow.dwHighDateTime;
 		const ULONGLONG wall = w.QuadPart;
 
 		float pct = 0.0f;
 		if (lastWall != 0 && wall > lastWall)
 		{
-			const double dCpu  = (double)(cpu  - lastCpu);
+			const double dCpu = (double)(cpu - lastCpu);
 			const double dWall = (double)(wall - lastWall);
 			pct = (float)(dCpu / dWall / cores * 100.0);
 		}
 		lastWall = wall;
-		lastCpu  = cpu;
+		lastCpu = cpu;
 		return pct;
 	}
-}
+} // namespace adventure::platform
 
-#else   // non-Windows stub (implement per-platform later)
+#else // non-Windows stub (implement per-platform later)
 
 namespace adventure::platform
 {
-	std::size_t workingSetBytes() { return 0; }
-	float       processCpuPercent() { return 0.0f; }
-}
+	std::size_t workingSetBytes()
+	{
+		return 0;
+	}
+	float processCpuPercent()
+	{
+		return 0.0f;
+	}
+} // namespace adventure::platform
 
 #endif

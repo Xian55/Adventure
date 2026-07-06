@@ -10,14 +10,24 @@ One module, one job. Split **data / presentation / OS / policy**:
 If a file needs "and" to describe what it does, consider splitting it.
 
 ## Code style (C++)
-Matches the author's house style:
-- **Tabs** for indent; **Allman braces** (opening brace on its own line).
+**Machine-enforced** by `.clang-format` (root) and gated in CI — run `adv-format` before committing.
+clang-format 19.x; `deps/` is excluded. The rules it encodes:
+- **Tabs** for indent; **Allman braces** (opening brace on its own line) — but **lambda bodies stay inline**.
+- `ColumnLimit: 0` — never auto-wrap; break long lines by hand where they read best.
 - `PascalCase` types, `camelCase` methods/functions, `m_` member prefix, `k`-prefixed constants.
-- `#pragma once`. Prefer `std::unique_ptr`/RAII; pimpl to hide heavy deps from headers.
-- Namespace everything in `adventure` (or `adventure::sub`). Singletons via an `sX` macro
-  (`sScript`) *only* where a single instance is genuinely global — prefer plain constructable classes
-  (like `Metrics`) so they stay testable.
-- Comments explain **why**, not what.
+- Left-aligned pointers/refs (`int* p`, `int& r`). `#pragma once`. `std::unique_ptr`/RAII; pimpl for heavy deps.
+- Namespace everything in `adventure` (or `adventure::sub`). Singletons via an `sX` macro (`sScript`) *only*
+  where a single instance is genuinely global — prefer plain constructable classes (`Metrics`) so tests can
+  make their own.
+- **One record per line** for multi-element vector/array/string-literal initializer lists, with a trailing
+  comma. clang-format preserves this but won't auto-explode a packed list — write it exploded.
+
+## Comments & docs
+- **No walls of comment text.** A code comment is one line stating the *why*. If it needs a paragraph, it
+  belongs in the subsystem `CLAUDE.md`, not in the code.
+- Every `src/<subsystem>/` has a `CLAUDE.md` (file table + gotchas + how-to-extend) — the map that speeds up
+  understanding. Keep it and the root `CLAUDE.md` current as code changes (use `adv-docs`).
+- Cross-link: comments point to the subsystem `CLAUDE.md`; `CLAUDE.md` points to `docs/design/`.
 
 ## Testing
 - Logic lives in `adventure_lib` so `adventure_tests` (doctest) can exercise it **without a window**.

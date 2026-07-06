@@ -1,0 +1,45 @@
+# Adventure house style — enforced (CI format gate). clang-format 19.x.
+# Tabs, Allman braces (lambdas stay inline), m_ members, left pointers/refs, no auto-wrap.
+# Vendored deps/ excluded via deps/.clang-format (DisableFormat).
+BasedOnStyle: LLVM
+Language: Cpp
+
+UseTab: ForIndentation
+TabWidth: 4
+IndentWidth: 4
+
+# Allman, but authored via Custom so lambda bodies keep their brace inline.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
+ColumnLimit: 0                 # never auto-wrap; line breaks authored by hand
+AccessModifierOffset: -4
+NamespaceIndentation: All
+
+PointerAlignment: Left         # int* p
+ReferenceAlignment: Left       # int& r
+SortIncludes: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: All
+
+# One record per line when a list/args break (never pack several per line).
+BinPackArguments: false
+BinPackParameters: false
+Cpp11BracedListStyle: true

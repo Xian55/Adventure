@@ -12,18 +12,21 @@ namespace adventure
 		// Nearest-rank percentile on an already-sorted vector (p in [0,1]).
 		float percentile(const std::vector<float>& sorted, float p)
 		{
-			if (sorted.empty()) return 0.0f;
+			if (sorted.empty())
+				return 0.0f;
 			std::size_t idx = (std::size_t)(p * (sorted.size() - 1) + 0.5f);
-			if (idx >= sorted.size()) idx = sorted.size() - 1;
+			if (idx >= sorted.size())
+				idx = sorted.size() - 1;
 			return sorted[idx];
 		}
-	}
+	} // namespace
 
 	FrameStats computeFrameStats(std::vector<float> samples)
 	{
 		FrameStats s;
 		s.count = samples.size();
-		if (samples.empty()) return s;
+		if (samples.empty())
+			return s;
 
 		std::sort(samples.begin(), samples.end());
 		const double sum = std::accumulate(samples.begin(), samples.end(), 0.0);
@@ -35,13 +38,13 @@ namespace adventure
 		return s;
 	}
 
-	bool writeProfileCsv(const std::string& path, const Metrics& metrics,
-		const std::vector<float>& frameSamples)
+	bool writeProfileCsv(const std::string& path, const Metrics& metrics, const std::vector<float>& frameSamples)
 	{
 		const FrameStats fs = computeFrameStats(frameSamples);
 
 		std::ofstream f(path);
-		if (!f) return false;
+		if (!f)
+			return false;
 
 		f << "metric,value\n";
 		f << "frames," << fs.count << "\n";
@@ -58,4 +61,4 @@ namespace adventure
 
 		return true;
 	}
-}
+} // namespace adventure

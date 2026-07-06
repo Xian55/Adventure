@@ -8,4 +8,4 @@ namespace adventure
 	// Reads a Metrics snapshot; never mutates it. Call inside BeginDrawing()/EndDrawing(), after
 	// the upscaled scene blit, so the text stays crisp.
 	void drawMetricsOverlay(const Metrics& metrics, bool visible);
-}
+} // namespace adventure

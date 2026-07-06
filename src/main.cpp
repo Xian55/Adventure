@@ -19,8 +19,11 @@ using namespace adventure;
 namespace
 {
 	// M0 placeholder component — proves EnTT is wired. Real components arrive in M1/M2.
-	struct Spin { float angle; };
-}
+	struct Spin
+	{
+		float angle;
+	};
+} // namespace
 
 int main()
 {
@@ -34,7 +37,7 @@ int main()
 	// Uncap the frame rate while profiling so measured times reflect real work, not the vsync cap.
 	SetConfigFlags(profiling ? FLAG_WINDOW_HIGHDPI : (FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI));
 	InitWindow(config::kWindowW, config::kWindowH, "Adventure - M0 (GRAVEN-style)");
-	ChangeDirectory(GetApplicationDirectory());   // resolve scripts/ and assets/ next to the exe
+	ChangeDirectory(GetApplicationDirectory()); // resolve scripts/ and assets/ next to the exe
 
 	Renderer renderer;
 	renderer.init(config::kWindowW, config::kWindowH, config::kLowW, config::kLowH);
@@ -52,13 +55,13 @@ int main()
 	sScript->runFile("scripts/tuning.lua");
 
 	Camera3D cam{};
-	cam.position   = Vector3{ 6.0f, 4.0f, 6.0f };
-	cam.target     = Vector3{ 0.0f, 0.5f, 0.0f };
-	cam.up         = Vector3{ 0.0f, 1.0f, 0.0f };
-	cam.fovy       = 60.0f;
+	cam.position = Vector3{6.0f, 4.0f, 6.0f};
+	cam.target = Vector3{0.0f, 0.5f, 0.0f};
+	cam.up = Vector3{0.0f, 1.0f, 0.0f};
+	cam.fovy = 60.0f;
 	cam.projection = CAMERA_PERSPECTIVE;
 
-	const Color fog = Color{ 26, 28, 40, 255 };   // dark gothic haze
+	const Color fog = Color{26, 28, 40, 255}; // dark gothic haze
 
 	// M0 verification hook: ADVENTURE_SHOT=<name> writes a screenshot after a few frames and exits.
 	const char* shotPath = getenv("ADVENTURE_SHOT");
@@ -68,13 +71,15 @@ int main()
 	float accumulator = 0.0f;
 
 	std::vector<float> frameSamples;
-	if (profiling) frameSamples.reserve((std::size_t)profileFrames);
+	if (profiling)
+		frameSamples.reserve((std::size_t)profileFrames);
 
 	while (!WindowShouldClose())
 	{
 		metrics.beginFrame();
 
-		if (IsKeyPressed(KEY_F3)) showMetrics = !showMetrics;
+		if (IsKeyPressed(KEY_F3))
+			showMetrics = !showMetrics;
 
 		// Fixed-step gameplay update.
 		{
@@ -82,26 +87,26 @@ int main()
 			accumulator += GetFrameTime();
 			while (accumulator >= config::kFixedDt)
 			{
-				reg.get<Spin>(spinner).angle += config::kFixedDt * 30.0f;  // deg/s
+				reg.get<Spin>(spinner).angle += config::kFixedDt * 30.0f; // deg/s
 				accumulator -= config::kFixedDt;
 			}
 		}
 
 		// Orbit the camera so the pixelated edges + depth are visible.
 		float a = reg.get<Spin>(spinner).angle * DEG2RAD;
-		cam.position = Vector3{ cosf(a) * 6.0f, 4.0f, sinf(a) * 6.0f };
+		cam.position = Vector3{cosf(a) * 6.0f, 4.0f, sinf(a) * 6.0f};
 
 		{
 			Metrics::Scope s(metrics, "scene");
 			renderer.beginScene(fog);
-				BeginMode3D(cam);
-					DrawGrid(20, 1.0f);
-					DrawCube(Vector3{ 0, 0.5f, 0 }, 1.5f, 1.0f, 1.5f, MAROON);
-					DrawCubeWires(Vector3{ 0, 0.5f, 0 }, 1.5f, 1.0f, 1.5f, Color{ 210, 130, 130, 255 });
-					DrawCube(Vector3{ 2.6f, 0.4f, -1.2f }, 0.8f, 0.8f, 0.8f, DARKBLUE);
-					DrawCube(Vector3{ -2.4f, 0.3f, 1.4f }, 0.6f, 0.6f, 0.6f, DARKGREEN);
-				EndMode3D();
-				DrawText("ADVENTURE  M0", 6, 6, 20, RAYWHITE);
+			BeginMode3D(cam);
+			DrawGrid(20, 1.0f);
+			DrawCube(Vector3{0, 0.5f, 0}, 1.5f, 1.0f, 1.5f, MAROON);
+			DrawCubeWires(Vector3{0, 0.5f, 0}, 1.5f, 1.0f, 1.5f, Color{210, 130, 130, 255});
+			DrawCube(Vector3{2.6f, 0.4f, -1.2f}, 0.8f, 0.8f, 0.8f, DARKBLUE);
+			DrawCube(Vector3{-2.4f, 0.3f, 1.4f}, 0.6f, 0.6f, 0.6f, DARKGREEN);
+			EndMode3D();
+			DrawText("ADVENTURE  M0", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
 		}
 
@@ -113,12 +118,12 @@ int main()
 		metrics.setLuaBytes(sScript->luaMemoryBytes());
 
 		BeginDrawing();
-			ClearBackground(BLACK);
-			{
-				Metrics::Scope s(metrics, "present");
-				renderer.blit();
-			}
-			drawMetricsOverlay(metrics, showMetrics);
+		ClearBackground(BLACK);
+		{
+			Metrics::Scope s(metrics, "present");
+			renderer.blit();
+		}
+		drawMetricsOverlay(metrics, showMetrics);
 		EndDrawing();
 
 		metrics.endFrame();
@@ -131,7 +136,11 @@ int main()
 				const bool ok = writeProfileCsv("profile.csv", metrics, frameSamples);
 				const FrameStats fs = computeFrameStats(frameSamples);
 				std::printf("[adventure] profile: %zu frames  avg %.2f ms  p95 %.2f ms  max %.2f ms  (%s)\n",
-					fs.count, fs.avgMs, fs.p95Ms, fs.maxMs, ok ? "profile.csv written" : "CSV write FAILED");
+				            fs.count,
+				            fs.avgMs,
+				            fs.p95Ms,
+				            fs.maxMs,
+				            ok ? "profile.csv written" : "CSV write FAILED");
 				std::fflush(stdout);
 				break;
 			}

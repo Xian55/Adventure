@@ -14,7 +14,7 @@ TEST_CASE("computeFrameStats handles an empty sample set")
 TEST_CASE("computeFrameStats computes avg/min/max/percentiles")
 {
 	// 1..10 ms
-	std::vector<float> samples = { 5, 1, 9, 3, 7, 2, 8, 4, 10, 6 };
+	std::vector<float> samples = {5, 1, 9, 3, 7, 2, 8, 4, 10, 6};
 	FrameStats s = computeFrameStats(samples);
 
 	CHECK(s.count == 10);
@@ -28,7 +28,7 @@ TEST_CASE("computeFrameStats computes avg/min/max/percentiles")
 
 TEST_CASE("computeFrameStats is order-independent (input copied, not mutated)")
 {
-	std::vector<float> samples = { 3, 1, 2 };
+	std::vector<float> samples = {3, 1, 2};
 	FrameStats s = computeFrameStats(samples);
 	CHECK(s.minMs == doctest::Approx(1.0));
 	CHECK(s.maxMs == doctest::Approx(3.0));

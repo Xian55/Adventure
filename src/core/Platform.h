@@ -11,4 +11,4 @@ namespace adventure::platform
 	// This process's CPU utilisation as a percentage of one core's worth of time, measured
 	// over the interval since the previous call (0..100*cores). First call seeds and returns 0.
 	float processCpuPercent();
-}
+} // namespace adventure::platform

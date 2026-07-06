@@ -16,9 +16,18 @@ ADV_BENCH(metrics_frame_with_sections, 200000, 600.0)
 	}();
 
 	m.beginFrame();
-	{ adventure::Metrics::Scope s(m, "a"); g_t += 0.001; }
-	{ adventure::Metrics::Scope s(m, "b"); g_t += 0.001; }
-	{ adventure::Metrics::Scope s(m, "c"); g_t += 0.001; }
+	{
+		adventure::Metrics::Scope s(m, "a");
+		g_t += 0.001;
+	}
+	{
+		adventure::Metrics::Scope s(m, "b");
+		g_t += 0.001;
+	}
+	{
+		adventure::Metrics::Scope s(m, "c");
+		g_t += 0.001;
+	}
 	g_t += 0.001;
 	m.endFrame();
 }

@@ -1,9 +1,7 @@
-// The one and only translation unit that includes LuaBridge3. All C++<->Lua marshaling lives
-// here so the heavy header (and its big object file) is isolated. Errors cross a lua_pcall,
-// so exceptions are disabled — Lua reports via longjmp, not C++ throw.
+// The only TU that includes LuaBridge3 (isolated, big-obj). Exceptions off; errors cross lua_pcall.
 #define LUABRIDGE_HAS_EXCEPTIONS 0
 
-#include "lua/ScriptEngineImpl.h"   // pulls in the extern "C" Lua headers
+#include "lua/ScriptEngineImpl.h" // pulls in the extern "C" Lua headers
 #include "LuaBridge.h"
 
 #include <cstdio>
@@ -22,8 +20,8 @@ namespace adventure
 	void bindHostApi(lua_State* L)
 	{
 		luabridge::getGlobalNamespace(L)
-			.beginNamespace("host")
-				.addFunction("log", &host_log)
-			.endNamespace();
+		    .beginNamespace("host")
+		    .addFunction("log", &host_log)
+		    .endNamespace();
 	}
-}
+} // namespace adventure

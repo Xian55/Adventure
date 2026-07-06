@@ -13,19 +13,25 @@ TEST_CASE("section timing accumulates against an injected clock")
 	Metrics m;
 	m.setClock([&t] { return t; });
 
-	m.beginFrame();                 // frame start @ t=0
-	m.begin("work"); t = 0.010; m.end("work");   // 10 ms
-	m.begin("draw"); t = 0.015; m.end("draw");   // 5 ms
+	m.beginFrame(); // frame start @ t=0
+	m.begin("work");
+	t = 0.010;
+	m.end("work"); // 10 ms
+	m.begin("draw");
+	t = 0.015;
+	m.end("draw"); // 5 ms
 	t = 0.016;
-	m.endFrame();                   // frame = 16 ms
+	m.endFrame(); // frame = 16 ms
 
 	CHECK(m.frameMsRaw() == doctest::Approx(16.0));
 
 	float work = -1.0f, draw = -1.0f;
 	for (const auto& s : m.sections())
 	{
-		if (std::string_view(s.name) == "work") work = s.msRaw;
-		if (std::string_view(s.name) == "draw") draw = s.msRaw;
+		if (std::string_view(s.name) == "work")
+			work = s.msRaw;
+		if (std::string_view(s.name) == "draw")
+			draw = s.msRaw;
 	}
 	CHECK(work == doctest::Approx(10.0));
 	CHECK(draw == doctest::Approx(5.0));
@@ -38,14 +44,19 @@ TEST_CASE("the same section accumulates across multiple begin/end in one frame")
 	m.setClock([&t] { return t; });
 
 	m.beginFrame();
-	m.begin("ai"); t = 0.002; m.end("ai");   // 2 ms
-	m.begin("ai"); t = 0.005; m.end("ai");   // +3 ms
+	m.begin("ai");
+	t = 0.002;
+	m.end("ai"); // 2 ms
+	m.begin("ai");
+	t = 0.005;
+	m.end("ai"); // +3 ms
 	t = 0.006;
 	m.endFrame();
 
 	float ai = -1.0f;
 	for (const auto& s : m.sections())
-		if (std::string_view(s.name) == "ai") ai = s.msRaw;
+		if (std::string_view(s.name) == "ai")
+			ai = s.msRaw;
 	CHECK(ai == doctest::Approx(5.0));
 }
 
@@ -56,16 +67,24 @@ TEST_CASE("per-frame accumulators reset each frame")
 	m.setClock([&t] { return t; });
 
 	m.beginFrame();
-	m.begin("x"); t = 0.010; m.end("x");
-	t = 0.011; m.endFrame();
+	m.begin("x");
+	t = 0.010;
+	m.end("x");
+	t = 0.011;
+	m.endFrame();
 
-	t = 1.000; m.beginFrame();
-	m.begin("x"); t = 1.001; m.end("x");   // 1 ms this frame
-	t = 1.002; m.endFrame();
+	t = 1.000;
+	m.beginFrame();
+	m.begin("x");
+	t = 1.001;
+	m.end("x"); // 1 ms this frame
+	t = 1.002;
+	m.endFrame();
 
 	float x = -1.0f;
 	for (const auto& s : m.sections())
-		if (std::string_view(s.name) == "x") x = s.msRaw;
+		if (std::string_view(s.name) == "x")
+			x = s.msRaw;
 	CHECK(x == doctest::Approx(1.0));
 }
 

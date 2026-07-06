@@ -3,34 +3,28 @@
 
 namespace adventure
 {
-	// Low-resolution render pipeline: scene -> low-res RT -> post (palette+dither) -> upscale blit.
-	// Usage per frame:
-	//   renderer.beginScene(fog);
-	//     BeginMode3D(cam); ...draw world/billboards...; EndMode3D();
-	//     ...low-res 2D overlay (crosshair)...
-	//   renderer.endScene();
-	//   renderer.postAndPresent();
+	// Low-res render pipeline: scene -> low-res RT -> post (palette+dither) -> point-upscale.
 	class Renderer
 	{
-		public:
-			void init(int winW, int winH, int lowW, int lowH);
-			void shutdown();
+	public:
+		void init(int winW, int winH, int lowW, int lowH);
+		void shutdown();
 
-			void beginScene(Color clear);   // BeginTextureMode(sceneRT) + clear
-			void endScene();                // EndTextureMode
-			void postProcess();             // scene RT -> post RT (palette+dither), low-res
-			void blit();                    // post RT -> window, upscaled; call inside BeginDrawing()
+		void beginScene(Color clear); // BeginTextureMode(sceneRT) + clear
+		void endScene();              // EndTextureMode
+		void postProcess();           // scene RT -> post RT (palette+dither), low-res
+		void blit();                  // post RT -> window, upscaled; call inside BeginDrawing()
 
-			int lowW() const { return m_lowW; }
-			int lowH() const { return m_lowH; }
+		int lowW() const { return m_lowW; }
+		int lowH() const { return m_lowH; }
 
-		private:
-			int m_winW = 0, m_winH = 0, m_lowW = 0, m_lowH = 0;
-			RenderTexture2D m_scene{};
-			RenderTexture2D m_post{};
-			Shader m_postShader{};
-			int m_locLowRes = -1;
-			int m_locLevels = -1;
-			bool m_ready = false;
+	private:
+		int m_winW = 0, m_winH = 0, m_lowW = 0, m_lowH = 0;
+		RenderTexture2D m_scene{};
+		RenderTexture2D m_post{};
+		Shader m_postShader{};
+		int m_locLowRes = -1;
+		int m_locLevels = -1;
+		bool m_ready = false;
 	};
-}
+} // namespace adventure
