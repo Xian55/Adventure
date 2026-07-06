@@ -24,6 +24,22 @@ For richer output, run the test exe directly (doctest reporter):
 ./build/mingw-debug/adventure_tests.exe -tc="watchdog*"   # filter by test-case name
 ```
 
+## Performance gate (benchmarks)
+The `adventure_bench` target is a headless micro-benchmark harness that returns nonzero if any case
+exceeds its ms budget. It's registered as a CTest test **only for optimized builds** (Debug is too noisy),
+so run it in Release:
+```bash
+cmake --preset mingw-release && cmake --build build/mingw-release
+ctest --test-dir build/mingw-release -C Release --output-on-failure   # tests + bench gate
+./build/mingw-release/adventure_bench.exe                             # raw numbers
+```
+Add a bench case for any new hot-path code: `ADV_BENCH(name, iters, budgetMs) { ...one iteration... }`
+in a `bench/*.cpp`, listed in the `adventure_bench` target. Budgets are ceilings with headroom, not
+targets — they catch regressions.
+
+To profile the real render loop headlessly: `ADVENTURE_PROFILE=300 ./adventure.exe` writes `profile.csv`
+(frame avg/p50/p95/max, RSS, Lua bytes, per-section ms).
+
 ## Notes
 - MinGW binaries statically link the GCC/libstdc++/winpthread runtimes; if a run ever fails with
   `0xc0000139` (entrypoint not found), a wrong runtime DLL is on PATH — the static link should prevent it.

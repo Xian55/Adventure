@@ -22,6 +22,7 @@ include(cmake/deps.cmake)
 set(ADVENTURE_LIB_SOURCES
     src/core/Platform.cpp
     src/core/Metrics.cpp
+    src/core/ProfileReport.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/lua/ScriptEngine.cpp
@@ -66,6 +67,21 @@ add_executable(adventure_tests
     tests/test_main.cpp
     tests/test_scriptengine.cpp
     tests/test_metrics.cpp
+    tests/test_profilereport.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)
 add_test(NAME adventure_tests COMMAND adventure_tests)
+
+# --- adventure_bench: headless micro-benchmarks that fail (nonzero exit) on budget breach ---
+add_executable(adventure_bench
+    bench/bench_main.cpp
+    bench/bench_lua.cpp
+    bench/bench_metrics.cpp
+)
+target_include_directories(adventure_bench PRIVATE bench)
+target_link_libraries(adventure_bench PRIVATE adventure_lib)
+# The perf gate is meaningful in Release; register it as a CTest test only for optimized builds so
+# Debug runs (slow, noisy) don't produce false regressions.
+add_test(NAME adventure_bench
+    CONFIGURATIONS Release RelWithDebInfo
+    COMMAND adventure_bench)

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # raylib/EnTT/doctest are fetched+built from source on first configure. Cache them so
+      # subsequent runs skip the ~minutes-long raylib build.
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/msvc-release/_deps
+          key: deps-${{ runner.os }}-${{ hashFiles('cmake/deps.cmake') }}
+
+      - name: Configure (MSVC Release)
+        run: cmake --preset msvc-release
+
+      - name: Build
+        run: cmake --build build/msvc-release --config Release
+
+      # Runs the doctest unit suite AND the adventure_bench perf gate (fails on budget breach).
+      - name: Test + perf gate
+        run: ctest --test-dir build/msvc-release -C Release --output-on-failure

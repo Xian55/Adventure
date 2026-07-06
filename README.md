@@ -22,6 +22,13 @@ cmake --build build/mingw-debug
 
 # test
 ctest --test-dir build/mingw-debug --output-on-failure
+
+# perf gate (Release runs unit tests + micro-benchmarks)
+cmake --preset mingw-release && cmake --build build/mingw-release
+ctest --test-dir build/mingw-release -C Release --output-on-failure
+
+# headless profile of the render loop -> profile.csv
+cd build/mingw-release && ADVENTURE_PROFILE=300 ./adventure.exe
 ```
 
 Requirements: CMake ≥ 3.24, a C++17 compiler (WinLibs MinGW-w64 UCRT or MSVC 2022), git, network on first
@@ -33,6 +40,7 @@ configure. Ninja recommended for the MinGW preset.
 - [Roadmap](docs/design/ROADMAP.md) — milestones (M0…M9).
 - [Combat](docs/design/COMBAT.md) — melee/kick/shield/enemy design and the C++/Lua split.
 - [Conventions](docs/design/CONVENTIONS.md) — SRP, code style, testing, data-driven feel.
+- [Development loop](docs/design/DEVELOPMENT_LOOP.md) — how a feature request becomes tested, perf-gated code.
 - [Asset pipeline](docs/ASSET_PIPELINE.md) — producing retro assets at scale.
 
 ## Repo layout
@@ -49,5 +57,7 @@ docs/       design docs + asset pipeline
 ```
 
 ## Automation (Claude skills)
-Project skills streamline the repetitive loops: `adv-build` (build + run + screenshot + DPI-crop),
-`adv-test` (build + ctest), `adv-new-module` (scaffold an SRP `.h/.cpp` pair). See `.claude/skills/`.
+Project skills streamline the loops: **`adv-feature`** (the full design→test→perf-gate→verify→commit loop
+for a feature request), `adv-build` (build + run + screenshot + DPI-crop), `adv-test` (build + ctest + perf
+gate), `adv-new-module` (scaffold an SRP `.h/.cpp` pair). See `.claude/skills/` and
+[docs/design/DEVELOPMENT_LOOP.md](docs/design/DEVELOPMENT_LOOP.md).
