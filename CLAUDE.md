@@ -2,8 +2,9 @@
 
 GRAVEN-style first-person dark-fantasy melee game. raylib 5.5 + C++17, gameplay scripted in sandboxed Lua.
 Retro look = low-res render + point upscale + fog + dither. Status: **M0 done**; **M1 in progress** —
-`.map` (Valve 220) parse + brush→convex geometry/collision (`src/world`) and world rendering (textured +
-vertex-light + fog, `render/WorldRenderer`) landed; next M1: Quake movement + AABB-vs-brush collision, viewmodel.
+`.map` parse + geometry/collision (`src/world`), world rendering (`render/WorldRenderer`), and Quake
+first-person movement + AABB-vs-brush collision (`src/player`, walkable room) landed; next M1: viewmodel +
+feel-tuning. Controls: WASD + mouse-look, Space jump, Ctrl crouch, F3 metrics.
 
 ## Commands
 ```bash
@@ -20,10 +21,10 @@ Skills automate these: `adv-feature` (full loop), `adv-build`, `adv-test`, `adv-
 setup).
 
 ## Layout
-`src/` game code (built into `adventure_lib`; thin `src/main.cpp`) — subsystems `core/ render/ lua/ world/` ·
-`tests/` doctest · `bench/` perf gate · `scripts/` Lua · `maps/` `.map` levels · `assets/` local PNGs
-(gitignored) · `deps/` vendored minilua + LuaBridge · `docs/design/` the design docs. Each
-`src/<subsystem>/` has its own `CLAUDE.md`.
+`src/` game code (built into `adventure_lib`; thin `src/main.cpp`) — subsystems `core/ render/ lua/ world/
+player/` · `tests/` doctest · `bench/` perf gate · `scripts/` Lua · `maps/` `.map` levels (`tools/gen_room.py`
+emits them) · `assets/` local PNGs (gitignored) · `deps/` vendored minilua + LuaBridge · `docs/design/` the
+design docs (+ `BACKLOG.md`). Each `src/<subsystem>/` has its own `CLAUDE.md`.
 
 Tooling env vars: `ASEPRITE` (Aseprite.exe path — used by `adv-sprite`).
 

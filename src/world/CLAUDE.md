@@ -7,7 +7,8 @@ raylib window), fully unit-tested. Format authority: the `adv-map` skill.
 |------|----------------|
 | `MapTypes.h` | Data types: `Face`/`Brush`/`Entity`/`MapData` (map space) and `MeshData`/`CollisionBrush`/`WorldGeometry` (engine space). |
 | `MapParser.{h,cpp}` | Valve 220 text → `MapData`. Tolerant tokenizer+parser: `parseMap` returns `ok=false`+error on malformed input, **never throws**. Keeps raw map coords. |
-| `BrushGeometry.{h,cpp}` | `MapData` → `WorldGeometry`: per-brush convex faces via plane clipping → per-texture `MeshData` + collision planes. Applies Z-up→Y-up + `kMapScale`. |
+| `BrushGeometry.{h,cpp}` | `MapData` → `WorldGeometry`: per-brush convex faces via plane clipping → per-texture `MeshData` + collision planes. Applies Z-up→Y-up + `kMapScale`. Also `mapToEngine()` for entity placement. |
+| `CollisionWorld.{h,cpp}` | Holds the collision brushes; `overlaps(center, halfExtents)` = AABB vs any convex brush (broadphase AABB filter + Minkowski-expanded plane test). Used by `player/PlayerController`. |
 
 ## Key facts / gotchas
 - **Winding-agnostic**: face normals are oriented outward from the brush interior (average of face points),
@@ -22,5 +23,5 @@ raylib window), fully unit-tested. Format authority: the `adv-map` skill.
 - Vertex color currently bakes a fake directional shade so faces read in 3D before real lighting.
 
 ## Coming
-`MapLoad` (classname → ECS spawn table), `render/WorldRenderer` (upload `MeshData` → raylib meshes + world
-fog/vertex-light shader), `CollisionWorld` (AABB-vs-brush queries for movement).
+`MapLoad` (classname → ECS spawn table at M2), broadphase acceleration (BVH/grid) when maps grow — see the
+partitioning plan in `docs/design/ARCHITECTURE.md`.

@@ -4,14 +4,15 @@
 #include "core/Config.h"
 #include "core/Metrics.h"
 #include "core/ProfileReport.h"
-#include "render/Renderer.h"
+#include "lua/ScriptEngine.h"
+#include "player/PlayerController.h"
 #include "render/MetricsOverlay.h"
+#include "render/Renderer.h"
 #include "render/WorldRenderer.h"
 #include "world/BrushGeometry.h"
+#include "world/CollisionWorld.h"
 #include "world/MapParser.h"
-#include "lua/ScriptEngine.h"
 
-#include <entt/entt.hpp>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -19,66 +20,65 @@
 
 using namespace adventure;
 
-namespace
-{
-	// M0 placeholder component — proves EnTT is wired. Real components arrive in M1/M2.
-	struct Spin
-	{
-		float angle;
-	};
-} // namespace
-
 int main()
 {
-	// Headless-ish profiling run: ADVENTURE_PROFILE=<frames> runs the real loop uncapped, records
-	// frame times, writes profile.csv, and exits — so performance is measurable without a human.
+	// ADVENTURE_PROFILE=<frames>: run the real loop uncapped, write profile.csv, exit.
 	const char* profileEnv = getenv("ADVENTURE_PROFILE");
 	const int profileFrames = profileEnv ? atoi(profileEnv) : 0;
 	const bool profiling = profileFrames > 0;
 
 	SetTraceLogLevel(LOG_WARNING);
-	// Uncap the frame rate while profiling so measured times reflect real work, not the vsync cap.
 	SetConfigFlags(profiling ? FLAG_WINDOW_HIGHDPI : (FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI));
-	InitWindow(config::kWindowW, config::kWindowH, "Adventure - M0 (GRAVEN-style)");
-	ChangeDirectory(GetApplicationDirectory()); // resolve scripts/ and assets/ next to the exe
+	InitWindow(config::kWindowW, config::kWindowH, "Adventure - M1 (GRAVEN-style)");
+	ChangeDirectory(GetApplicationDirectory());
+	DisableCursor(); // capture mouse for look
 
 	Renderer renderer;
 	renderer.init(config::kWindowW, config::kWindowH, config::kLowW, config::kLowH);
 
 	Metrics& metrics = Metrics::instance();
 
-	// ECS smoke test.
-	entt::registry reg;
-	entt::entity spinner = reg.create();
-	reg.emplace<Spin>(spinner, 0.0f);
-
-	// Lua boot + sandbox proof + load tuning data.
 	sScript->init();
 	sScript->selfTest();
 	sScript->runFile("scripts/tuning.lua");
 
-	Camera3D cam{};
-	cam.position = Vector3{6.0f, 4.0f, 6.0f};
-	cam.target = Vector3{0.0f, 0.5f, 0.0f};
-	cam.up = Vector3{0.0f, 1.0f, 0.0f};
-	cam.fovy = 60.0f;
-	cam.projection = CAMERA_PERSPECTIVE;
+	const Color fog = Color{26, 28, 40, 255};
 
-	const Color fog = Color{26, 28, 40, 255}; // dark gothic haze
+	char* mapText = LoadFileText("maps/room.map");
+	world::MapParseResult mp = world::parseMap(mapText ? mapText : "");
+	if (mapText)
+		UnloadFileText(mapText);
+	world::WorldGeometry geo = world::buildWorld(mp.data);
 
 	WorldRenderer world;
+	world.load(geo);
+	world.setFog(fog, 0.10f);
+
+	world::CollisionWorld collision;
+	collision.build(geo);
+	TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes", (int)geo.meshes.size(), (int)collision.brushCount());
+
+	MoveTuning tune;
+	tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
+	tune.accel = (float)sScript->evalNumber("tuning.accel", tune.accel);
+	tune.airAccel = (float)sScript->evalNumber("tuning.airAccel", tune.airAccel);
+	tune.friction = (float)sScript->evalNumber("tuning.friction", tune.friction);
+	tune.stopSpeed = (float)sScript->evalNumber("tuning.stopSpeed", tune.stopSpeed);
+	tune.gravity = (float)sScript->evalNumber("tuning.gravity", tune.gravity);
+	tune.jumpSpeed = (float)sScript->evalNumber("tuning.jumpSpeed", tune.jumpSpeed);
+
+	Player player;
+	if (const world::Entity* spawn = mp.data.first("info_player_start"))
 	{
-		char* text = LoadFileText("maps/box.map");
-		world::MapParseResult mp = world::parseMap(text ? text : "");
-		if (text)
-			UnloadFileText(text);
-		world::WorldGeometry geo = world::buildWorld(mp.data);
-		world.load(geo);
-		world.setFog(fog, 0.18f);
-		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes", (int)geo.meshes.size(), (int)geo.collision.size());
+		player.position = world::mapToEngine(spawn->vec3("origin"));
+		player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
 	}
 
-	// M0 verification hook: ADVENTURE_SHOT=<name> writes a screenshot after a few frames and exits.
+	Camera3D cam{};
+	cam.up = Vector3{0.0f, 1.0f, 0.0f};
+	cam.fovy = 70.0f;
+	cam.projection = CAMERA_PERSPECTIVE;
+
 	const char* shotPath = getenv("ADVENTURE_SHOT");
 	int frame = 0;
 
@@ -96,27 +96,49 @@ int main()
 		if (IsKeyPressed(KEY_F3))
 			showMetrics = !showMetrics;
 
-		// Fixed-step gameplay update.
+		// Mouse look (per display frame for smoothness).
+		{
+			const float sens = 0.0022f;
+			Vector2 md = GetMouseDelta();
+			player.yaw += md.x * sens;
+			player.pitch -= md.y * sens;
+			const float lim = 1.55f;
+			if (player.pitch > lim)
+				player.pitch = lim;
+			if (player.pitch < -lim)
+				player.pitch = -lim;
+		}
+
+		// Fixed-step movement + collision.
 		{
 			Metrics::Scope s(metrics, "update");
+			MoveInput in;
+			in.forward = (IsKeyDown(KEY_W) ? 1.0f : 0.0f) - (IsKeyDown(KEY_S) ? 1.0f : 0.0f);
+			in.right = (IsKeyDown(KEY_D) ? 1.0f : 0.0f) - (IsKeyDown(KEY_A) ? 1.0f : 0.0f);
+			in.jump = IsKeyDown(KEY_SPACE);
+			in.crouch = IsKeyDown(KEY_LEFT_CONTROL);
 			accumulator += GetFrameTime();
 			while (accumulator >= config::kFixedDt)
 			{
-				reg.get<Spin>(spinner).angle += config::kFixedDt * 30.0f; // deg/s
+				updatePlayer(player, in, collision, tune, config::kFixedDt);
 				accumulator -= config::kFixedDt;
 			}
 		}
 
-		// Orbit the camera so the pixelated edges + depth are visible.
-		float a = reg.get<Spin>(spinner).angle * DEG2RAD;
-		cam.position = Vector3{cosf(a) * 6.0f, 4.0f, sinf(a) * 6.0f};
+		// First-person camera from the player.
+		{
+			Vector3 eye = player.position;
+			eye.y += tune.eyeHeight - tune.height * 0.5f;
+			Vector3 dir = {sinf(player.yaw) * cosf(player.pitch), sinf(player.pitch), -cosf(player.yaw) * cosf(player.pitch)};
+			cam.position = eye;
+			cam.target = Vector3{eye.x + dir.x, eye.y + dir.y, eye.z + dir.z};
+		}
 
 		{
 			Metrics::Scope s(metrics, "scene");
 			renderer.beginScene(fog);
 			BeginMode3D(cam);
 			world.draw(cam.position);
-			DrawGrid(20, 1.0f);
 			EndMode3D();
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();

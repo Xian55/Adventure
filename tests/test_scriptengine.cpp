@@ -49,3 +49,15 @@ TEST_CASE("lua memory is reported")
 	sScript->init();
 	CHECK(sScript->luaMemoryBytes() > 0);
 }
+
+TEST_CASE("evalNumber evaluates expressions and falls back on error")
+{
+	sScript->init();
+	CHECK(sScript->evalNumber("1 + 2", -1.0) == doctest::Approx(3.0));
+	CHECK(sScript->evalNumber("math.floor(3.7)", -1.0) == doctest::Approx(3.0));
+	CHECK(sScript->evalNumber("nosuchglobal.x", 9.0) == doctest::Approx(9.0)); // index nil -> def
+	CHECK(sScript->evalNumber("'a string'", 5.0) == doctest::Approx(5.0));     // non-number -> def
+
+	REQUIRE(sScript->runString("t", "tuning = { moveSpeed = 8.5 }"));
+	CHECK(sScript->evalNumber("tuning.moveSpeed", 0.0) == doctest::Approx(8.5));
+}

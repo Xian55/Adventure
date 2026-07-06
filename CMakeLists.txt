@@ -25,6 +25,8 @@ set(ADVENTURE_LIB_SOURCES
     src/core/ProfileReport.cpp
     src/world/MapParser.cpp
     src/world/BrushGeometry.cpp
+    src/world/CollisionWorld.cpp
+    src/player/PlayerController.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
@@ -73,6 +75,8 @@ add_executable(adventure_tests
     tests/test_profilereport.cpp
     tests/test_mapparser.cpp
     tests/test_brushgeometry.cpp
+    tests/test_collisionworld.cpp
+    tests/test_playercontroller.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)
 add_test(NAME adventure_tests COMMAND adventure_tests)

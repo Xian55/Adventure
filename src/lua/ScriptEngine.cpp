@@ -77,6 +77,36 @@ namespace adventure
 		return kb * 1024 + b;
 	}
 
+	double ScriptEngine::evalNumber(const std::string& expr, double def)
+	{
+		if (!m_impl->L)
+			init();
+		lua_State* L = m_impl->L;
+		const int base = lua_gettop(L);
+
+		std::string chunk = "return (" + expr + ")";
+		if (luaL_loadbufferx(L, chunk.data(), chunk.size(), "eval", "t") != LUA_OK)
+		{
+			lua_settop(L, base);
+			return def;
+		}
+		lua_rawgeti(L, LUA_REGISTRYINDEX, m_impl->sandboxRef);
+		if (lua_setupvalue(L, -2, 1) == nullptr)
+			lua_pop(L, 1);
+
+		m_impl->instrArmed = true;
+		m_impl->instrCount = 0;
+		m_impl->instrBudget = kInstrBudget;
+		int st = lua_pcall(L, 0, 1, 0);
+		m_impl->instrArmed = false;
+
+		double out = def;
+		if (st == LUA_OK && lua_isnumber(L, -1))
+			out = lua_tonumber(L, -1);
+		lua_settop(L, base);
+		return out;
+	}
+
 	void ScriptEngine::init()
 	{
 		if (m_impl->L)

@@ -25,6 +25,9 @@ namespace adventure
 		// Current Lua VM heap usage in bytes (for the metrics overlay).
 		std::size_t luaMemoryBytes() const;
 
+		// Evaluate `return (expr)` in the sandbox; return the number, or def on error/non-number.
+		double evalNumber(const std::string& expr, double def);
+
 		// Boot proof: asserts dangerous libs (io/os.execute/require/load/dofile/debug/package)
 		// are absent from the sandbox and that the watchdog kills an infinite loop.
 		void selfTest();
