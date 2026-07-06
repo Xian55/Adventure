@@ -1,0 +1,9 @@
+# Normalize line endings: LF in the repo, native on checkout.
+* text=auto
+
+# Vendored single-file amalgamations — large, keep as-is, don't diff/linguist them.
+deps/minilua/minilua.h   linguist-vendored -text
+deps/luabridge/LuaBridge.h linguist-vendored
+
+# Binary assets
+*.png binary
