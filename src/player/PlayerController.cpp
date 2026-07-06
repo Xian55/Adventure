@@ -59,7 +59,30 @@ namespace adventure
 
 	void updatePlayer(Player& p, const MoveInput& in, const world::CollisionWorld& world, const MoveTuning& t, float dt)
 	{
-		p.crouched = in.crouch;
+		// Crouch toggles the collider height while keeping the feet planted (shift the center), and
+		// standing up requires headroom — otherwise growing the AABB around a fixed center would push it
+		// into the floor/ceiling and jam every axis (the "stuck after crouch" bug).
+		if (in.crouch != p.crouched)
+		{
+			const float dh = (t.height - t.crouchHeight) * 0.5f;
+			if (in.crouch)
+			{
+				p.position.y -= dh; // shrink from the top: lower center, feet stay
+				p.crouched = true;
+			}
+			else
+			{
+				// Inset the test box slightly so merely resting on the floor (touching == overlap)
+				// doesn't read as blocked; this checks real headroom (a low ceiling) only.
+				Vector3 fullHalf = {t.radius - 0.02f, t.height * 0.5f - 0.03f, t.radius - 0.02f};
+				Vector3 stand = {p.position.x, p.position.y + dh, p.position.z};
+				if (!world.overlaps(stand, fullHalf)) // only stand if there's headroom
+				{
+					p.position = stand;
+					p.crouched = false;
+				}
+			}
+		}
 		Vector3 h = halfExtents(p, t);
 
 		// Yaw-relative wish direction (horizontal). yaw 0 => forward -Z, right +X.
@@ -73,10 +96,12 @@ namespace adventure
 			wish.z /= wl;
 		}
 
+		const float wishSpeed = in.sprint ? t.sprintSpeed : t.moveSpeed;
+
 		if (p.onGround)
 		{
 			applyFriction(p.velocity, t, dt);
-			accelerate(p.velocity, wish, t.moveSpeed, t.accel, dt);
+			accelerate(p.velocity, wish, wishSpeed, t.accel, dt);
 			if (in.jump)
 			{
 				p.velocity.y = t.jumpSpeed;
@@ -85,7 +110,7 @@ namespace adventure
 		}
 		else
 		{
-			accelerate(p.velocity, wish, t.moveSpeed, t.airAccel, dt);
+			accelerate(p.velocity, wish, wishSpeed, t.airAccel, dt);
 		}
 
 		p.velocity.y -= t.gravity * dt;

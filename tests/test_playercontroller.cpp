@@ -63,6 +63,40 @@ TEST_CASE("a wall blocks horizontal movement")
 	CHECK(p.position.x > -2.0f); // but it did move toward the wall
 }
 
+TEST_CASE("crouch then stand keeps the player mobile (no stuck-after-crouch)")
+{
+	world::CollisionWorld w = worldFrom(boxMap(-256, 256, -256, 256, -64, 0)); // floor top at y=0
+	MoveTuning t;
+	Player p;
+	p.position = {0.0f, 3.0f, 0.0f};
+	step(p, MoveInput{}, w, t, 240); // land
+	REQUIRE(p.onGround);
+
+	MoveInput crouch;
+	crouch.crouch = true;
+	step(p, crouch, w, t, 30);
+	CHECK(p.crouched);
+	CHECK(p.onGround);
+
+	// can move while crouched
+	float x0 = p.position.x;
+	MoveInput crouchMove;
+	crouchMove.crouch = true;
+	crouchMove.right = 1.0f;
+	step(p, crouchMove, w, t, 90);
+	CHECK(p.position.x > x0 + 0.05f);
+
+	// stand up (open room -> headroom) and stay mobile (the bug: stuck after crouch)
+	MoveInput stand;
+	step(p, stand, w, t, 30);
+	CHECK_FALSE(p.crouched);
+	float x1 = p.position.x;
+	MoveInput move;
+	move.right = 1.0f;
+	step(p, move, w, t, 90);
+	CHECK(p.position.x > x1 + 0.05f);
+}
+
 TEST_CASE("player can move away from a wall unobstructed")
 {
 	world::CollisionWorld w = worldFrom(boxMap(0, 256, -256, 256, -256, 256));

@@ -11,6 +11,7 @@ namespace adventure
 		float right = 0.0f;   // -1..1 (D/A)
 		bool jump = false;
 		bool crouch = false;
+		bool sprint = false;
 	};
 
 	// One fixed-step update: Quake-style accelerate/friction + axis-separated swept-AABB collision.

@@ -6,13 +6,14 @@ namespace adventure
 	// here are fallbacks. Dimensions (radius/height/eye) are structural and stay in C++.
 	struct MoveTuning
 	{
-		float moveSpeed = 8.0f;
-		float accel = 10.0f;
-		float airAccel = 1.2f;
-		float friction = 6.0f;
-		float stopSpeed = 2.0f;
-		float gravity = 22.0f;
-		float jumpSpeed = 8.0f;
+		float moveSpeed = 4.5f;   // walk
+		float sprintSpeed = 8.0f; // hold sprint
+		float accel = 12.0f;
+		float airAccel = 1.0f;
+		float friction = 9.0f;
+		float stopSpeed = 3.0f;
+		float gravity = 25.0f;
+		float jumpSpeed = 7.5f;
 
 		float radius = 0.35f; // XZ half-extent
 		float height = 1.7f;  // standing full height

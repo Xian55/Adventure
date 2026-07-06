@@ -8,6 +8,7 @@
 #include "player/PlayerController.h"
 #include "render/MetricsOverlay.h"
 #include "render/Renderer.h"
+#include "render/Viewmodel.h"
 #include "render/WorldRenderer.h"
 #include "world/BrushGeometry.h"
 #include "world/CollisionWorld.h"
@@ -66,6 +67,10 @@ int main()
 	tune.stopSpeed = (float)sScript->evalNumber("tuning.stopSpeed", tune.stopSpeed);
 	tune.gravity = (float)sScript->evalNumber("tuning.gravity", tune.gravity);
 	tune.jumpSpeed = (float)sScript->evalNumber("tuning.jumpSpeed", tune.jumpSpeed);
+	tune.sprintSpeed = (float)sScript->evalNumber("tuning.sprintSpeed", tune.sprintSpeed);
+	const float bobFreq = (float)sScript->evalNumber("tuning.bobFreq", 9.0);
+	const float weaponBob = (float)sScript->evalNumber("tuning.weaponBob", 0.02);
+	const float headBob = (float)sScript->evalNumber("tuning.headBob", 0.035);
 
 	Player player;
 	if (const world::Entity* spawn = mp.data.first("info_player_start"))
@@ -84,6 +89,7 @@ int main()
 
 	bool showMetrics = true;
 	float accumulator = 0.0f;
+	float bobPhase = 0.0f;
 
 	std::vector<float> frameSamples;
 	if (profiling)
@@ -117,6 +123,7 @@ int main()
 			in.right = (IsKeyDown(KEY_D) ? 1.0f : 0.0f) - (IsKeyDown(KEY_A) ? 1.0f : 0.0f);
 			in.jump = IsKeyDown(KEY_SPACE);
 			in.crouch = IsKeyDown(KEY_LEFT_CONTROL);
+			in.sprint = IsKeyDown(KEY_LEFT_SHIFT);
 			accumulator += GetFrameTime();
 			while (accumulator >= config::kFixedDt)
 			{
@@ -125,10 +132,16 @@ int main()
 			}
 		}
 
-		// First-person camera from the player.
+		// Bob (from horizontal speed) + first-person camera from the player.
+		float weaponBobAmt = 0.0f;
 		{
+			float hs = sqrtf(player.velocity.x * player.velocity.x + player.velocity.z * player.velocity.z);
+			bobPhase += hs * GetFrameTime() * bobFreq * 0.1f;
+			float moveFrac = tune.sprintSpeed > 0.01f ? fminf(1.0f, hs / tune.sprintSpeed) : 0.0f;
+			weaponBobAmt = weaponBob * moveFrac;
+
 			Vector3 eye = player.position;
-			eye.y += tune.eyeHeight - tune.height * 0.5f;
+			eye.y += tune.eyeHeight - tune.height * 0.5f + sinf(bobPhase * 2.0f) * headBob * moveFrac;
 			Vector3 dir = {sinf(player.yaw) * cosf(player.pitch), sinf(player.pitch), -cosf(player.yaw) * cosf(player.pitch)};
 			cam.position = eye;
 			cam.target = Vector3{eye.x + dir.x, eye.y + dir.y, eye.z + dir.z};
@@ -140,6 +153,7 @@ int main()
 			BeginMode3D(cam);
 			world.draw(cam.position);
 			EndMode3D();
+			drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime());
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
 		}

@@ -1,10 +1,11 @@
 # CLAUDE.md — Adventure
 
 GRAVEN-style first-person dark-fantasy melee game. raylib 5.5 + C++17, gameplay scripted in sandboxed Lua.
-Retro look = low-res render + point upscale + fog + dither. Status: **M0 done**; **M1 in progress** —
-`.map` parse + geometry/collision (`src/world`), world rendering (`render/WorldRenderer`), and Quake
-first-person movement + AABB-vs-brush collision (`src/player`, walkable room) landed; next M1: viewmodel +
-feel-tuning. Controls: WASD + mouse-look, Space jump, Ctrl crouch, F3 metrics.
+Retro look = low-res render + point upscale + fog + dither. Status: **M0 + M1 done** — `.map` parse +
+geometry/collision (`src/world`), world rendering (`render/WorldRenderer`), Quake first-person movement +
+AABB-vs-brush collision (`src/player`), torch+sword viewmodel (`render/Viewmodel`), Lua feel-tuning. **Next:
+M2 combat slice** (melee state machine + sweeping hitbox, kick, shield, one skeleton). Controls: WASD +
+mouse-look, Shift sprint, Space jump, Ctrl crouch, F3 metrics.
 
 ## Commands
 ```bash

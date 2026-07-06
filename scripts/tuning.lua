@@ -1,21 +1,24 @@
--- Movement / combat tuning. Hot-reloadable — C++ reads these values so feel can be
--- iterated without recompiling. M0: proves script data loads under the sandbox.
+-- Movement / combat / view feel. Hot-reloadable: C++ reads these so feel is tuned here, not in code.
 tuning = {
-	-- movement (Quake accel model, used from M1)
-	moveSpeed = 8.0,
-	accel     = 10.0,
-	airAccel  = 1.2,
-	friction  = 6.0,
-	stopSpeed = 2.0,
-	gravity   = 22.0,
-	jumpSpeed = 8.0,
+	-- movement (Quake accel). moveSpeed = walk; hold Shift for sprintSpeed.
+	moveSpeed   = 4.5,
+	sprintSpeed = 8.0,
+	accel       = 12.0,
+	airAccel    = 1.0,   -- low air control -> committed jumps
+	friction    = 9.0,   -- higher -> less slide on landing
+	stopSpeed   = 3.0,
+	gravity     = 25.0,  -- snappier jump arc
+	jumpSpeed   = 7.5,
+
+	-- view feel
+	bobFreq   = 9.0,   -- weapon/head bob cadence
+	weaponBob = 0.02,  -- viewmodel sway amplitude
+	headBob   = 0.035, -- camera bob amplitude
 
 	-- combat (used from M2)
 	kickReach   = 1.6,
 	kickImpulse = 14.0,
 }
 
-print(string.format("tuning loaded: moveSpeed=%.1f accel=%.1f gravity=%.1f",
-	tuning.moveSpeed, tuning.accel, tuning.gravity))
-
-if host then host.log("host bridge reachable from sandbox") end
+print(string.format("tuning loaded: walk=%.1f sprint=%.1f friction=%.1f gravity=%.1f",
+	tuning.moveSpeed, tuning.sprintSpeed, tuning.friction, tuning.gravity))

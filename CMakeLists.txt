@@ -30,6 +30,7 @@ set(ADVENTURE_LIB_SOURCES
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
+    src/render/Viewmodel.cpp
     src/lua/ScriptEngine.cpp
     src/lua/Bindings.cpp                 # the only TU that includes LuaBridge
     deps/minilua/minilua_impl.c          # Lua 5.5 amalgamation, one C TU
