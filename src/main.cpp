@@ -39,49 +39,58 @@ int main()
 	renderer.init(config::kWindowW, config::kWindowH, config::kLowW, config::kLowH);
 
 	Metrics& metrics = Metrics::instance();
+	const Color fog = Color{26, 28, 40, 255};
 
 	sScript->init();
 	sScript->selfTest();
-	sScript->runFile("scripts/tuning.lua");
 
-	const Color fog = Color{26, 28, 40, 255};
+	// --- Tuning (hot-reloadable: F5) ---
+	MoveTuning tune;
+	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
+	auto loadTuning = [&]() {
+		sScript->runFile("scripts/tuning.lua");
+		tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
+		tune.sprintSpeed = (float)sScript->evalNumber("tuning.sprintSpeed", tune.sprintSpeed);
+		tune.accel = (float)sScript->evalNumber("tuning.accel", tune.accel);
+		tune.airAccel = (float)sScript->evalNumber("tuning.airAccel", tune.airAccel);
+		tune.friction = (float)sScript->evalNumber("tuning.friction", tune.friction);
+		tune.stopSpeed = (float)sScript->evalNumber("tuning.stopSpeed", tune.stopSpeed);
+		tune.gravity = (float)sScript->evalNumber("tuning.gravity", tune.gravity);
+		tune.jumpSpeed = (float)sScript->evalNumber("tuning.jumpSpeed", tune.jumpSpeed);
+		tune.stepHeight = (float)sScript->evalNumber("tuning.stepHeight", tune.stepHeight);
+		bobFreq = (float)sScript->evalNumber("tuning.bobFreq", bobFreq);
+		weaponBob = (float)sScript->evalNumber("tuning.weaponBob", weaponBob);
+		headBob = (float)sScript->evalNumber("tuning.headBob", headBob);
+	};
 
+	// --- Map (hot-reloadable: F6) ---
 	const char* mapEnv = getenv("ADVENTURE_MAP");
 	const char* mapPath = mapEnv ? mapEnv : "maps/training.map";
-	char* mapText = LoadFileText(mapPath);
-	world::MapParseResult mp = world::parseMap(mapText ? mapText : "");
-	if (mapText)
-		UnloadFileText(mapText);
-	world::WorldGeometry geo = world::buildWorld(mp.data);
-
 	WorldRenderer world;
-	world.load(geo);
-	world.setFog(fog, 0.10f);
-
 	world::CollisionWorld collision;
-	collision.build(geo);
-	TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes", (int)geo.meshes.size(), (int)collision.brushCount());
-
-	MoveTuning tune;
-	tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
-	tune.accel = (float)sScript->evalNumber("tuning.accel", tune.accel);
-	tune.airAccel = (float)sScript->evalNumber("tuning.airAccel", tune.airAccel);
-	tune.friction = (float)sScript->evalNumber("tuning.friction", tune.friction);
-	tune.stopSpeed = (float)sScript->evalNumber("tuning.stopSpeed", tune.stopSpeed);
-	tune.gravity = (float)sScript->evalNumber("tuning.gravity", tune.gravity);
-	tune.jumpSpeed = (float)sScript->evalNumber("tuning.jumpSpeed", tune.jumpSpeed);
-	tune.sprintSpeed = (float)sScript->evalNumber("tuning.sprintSpeed", tune.sprintSpeed);
-	tune.stepHeight = (float)sScript->evalNumber("tuning.stepHeight", tune.stepHeight);
-	const float bobFreq = (float)sScript->evalNumber("tuning.bobFreq", 9.0);
-	const float weaponBob = (float)sScript->evalNumber("tuning.weaponBob", 0.02);
-	const float headBob = (float)sScript->evalNumber("tuning.headBob", 0.035);
-
+	world::WorldGeometry geo;
 	Player player;
-	if (const world::Entity* spawn = mp.data.first("info_player_start"))
-	{
-		player.position = world::mapToEngine(spawn->vec3("origin"));
-		player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
-	}
+	auto loadMap = [&](const char* path) {
+		char* txt = LoadFileText(path);
+		world::MapParseResult r = world::parseMap(txt ? txt : "");
+		if (txt)
+			UnloadFileText(txt);
+		geo = world::buildWorld(r.data);
+		world.unload();
+		world.load(geo);
+		world.setFog(fog, 0.10f);
+		collision.build(geo);
+		if (const world::Entity* sp = r.data.first("info_player_start"))
+		{
+			player.position = world::mapToEngine(sp->vec3("origin"));
+			player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
+		}
+		player.velocity = Vector3{0, 0, 0};
+		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes", (int)geo.meshes.size(), (int)collision.brushCount());
+	};
+
+	loadTuning();
+	loadMap(mapPath);
 
 	Camera3D cam{};
 	cam.up = Vector3{0.0f, 1.0f, 0.0f};
@@ -93,6 +102,7 @@ int main()
 
 	bool showMetrics = true;
 	bool showTelemetry = true;
+	bool noclip = false;
 	JumpMeter jumpMeter;
 	float accumulator = 0.0f;
 	float bobPhase = 0.0f;
@@ -109,6 +119,12 @@ int main()
 			showMetrics = !showMetrics;
 		if (IsKeyPressed(KEY_F4))
 			showTelemetry = !showTelemetry;
+		if (IsKeyPressed(KEY_F5))
+			loadTuning(); // hot-reload feel
+		if (IsKeyPressed(KEY_F6))
+			loadMap(mapPath); // hot-reload level
+		if (IsKeyPressed(KEY_V))
+			noclip = !noclip; // free-fly / level inspection
 
 		// Mouse look (per display frame for smoothness).
 		{
@@ -123,7 +139,7 @@ int main()
 				player.pitch = -lim;
 		}
 
-		// Fixed-step movement + collision.
+		// Fixed-step movement (walk/collide) or free-fly (noclip).
 		{
 			Metrics::Scope s(metrics, "update");
 			MoveInput in;
@@ -135,8 +151,23 @@ int main()
 			accumulator += GetFrameTime();
 			while (accumulator >= config::kFixedDt)
 			{
-				updatePlayer(player, in, collision, tune, config::kFixedDt);
-				jumpMeter.update(player, config::kFixedDt);
+				if (noclip)
+				{
+					Vector3 f = {sinf(player.yaw) * cosf(player.pitch), sinf(player.pitch), -cosf(player.yaw) * cosf(player.pitch)};
+					Vector3 rt = {cosf(player.yaw), 0.0f, sinf(player.yaw)};
+					float sp = tune.sprintSpeed * (in.sprint ? 3.0f : 1.5f) * config::kFixedDt;
+					float up = (in.jump ? 1.0f : 0.0f) - (in.crouch ? 1.0f : 0.0f);
+					player.position.x += (f.x * in.forward + rt.x * in.right) * sp;
+					player.position.y += (f.y * in.forward + up) * sp;
+					player.position.z += (f.z * in.forward + rt.z * in.right) * sp;
+					player.velocity = Vector3{0, 0, 0};
+					player.onGround = false;
+				}
+				else
+				{
+					updatePlayer(player, in, collision, tune, config::kFixedDt);
+					jumpMeter.update(player, config::kFixedDt);
+				}
 				accumulator -= config::kFixedDt;
 			}
 		}
@@ -162,7 +193,8 @@ int main()
 			BeginMode3D(cam);
 			world.draw(cam.position);
 			EndMode3D();
-			drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime());
+			if (!noclip)
+				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime());
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
 		}
@@ -185,7 +217,10 @@ int main()
 		{
 			int ty = 156; // below the metrics panel (fixed coords; GetRenderHeight is DPI-unreliable)
 			const Color tc = Color{170, 215, 255, 255};
-			DrawText(TextFormat("TRAINING (F4)   speed %.2f   %s%s", JumpMeter::horizontalSpeed(player), player.onGround ? "ground" : "air", player.crouched ? " crouch" : ""),
+			DrawText(TextFormat("TRAINING  V noclip%s  F5 tuning  F6 map   speed %.2f  %s",
+			                    noclip ? " [ON]" : "",
+			                    JumpMeter::horizontalSpeed(player),
+			                    noclip ? "fly" : (player.onGround ? "ground" : "air")),
 			         12,
 			         ty,
 			         20,
@@ -200,7 +235,7 @@ int main()
 			         ty + 52,
 			         20,
 			         tc);
-			DrawText(TextFormat("max:  dist %.2f  height %.2f", jumpMeter.maxDistance(), jumpMeter.maxHeight()),
+			DrawText(TextFormat("max:  dist %.2f  height %.2f  pos %.1f %.1f %.1f", jumpMeter.maxDistance(), jumpMeter.maxHeight(), player.position.x, player.position.y, player.position.z),
 			         12,
 			         ty + 78,
 			         20,
