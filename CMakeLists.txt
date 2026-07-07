@@ -88,6 +88,7 @@ add_executable(adventure_tests
     tests/test_profilereport.cpp
     tests/test_mapparser.cpp
     tests/test_brushgeometry.cpp
+    tests/test_geometry_golden.cpp
     tests/test_collisionworld.cpp
     tests/test_playercontroller.cpp
     tests/test_jumpmeter.cpp

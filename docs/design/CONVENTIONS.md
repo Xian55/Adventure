@@ -9,8 +9,14 @@ One module, one job. Split **data / presentation / OS / policy**:
 
 If a file needs "and" to describe what it does, consider splitting it.
 
+## Performance
+Real-time engine — see **[PERFORMANCE.md](PERFORMANCE.md)** for hot-path coding rules (no per-frame
+allocation, data-oriented iteration, static dispatch, batch draws, measure-don't-guess). Enforced by the
+bench budgets + `profile.csv`.
+
 ## Code style (C++)
 **Machine-enforced** by `.clang-format` (root) and gated in CI — run `adv-format` before committing.
+Warnings are errors on our targets (`-Wall -Wextra -Werror` / `/W4 /WX`); deps are exempt (SYSTEM/separate).
 clang-format 19.x; `deps/` is excluded. The rules it encodes:
 - **Tabs** for indent; **Allman braces** (opening brace on its own line) — but **lambda bodies stay inline**.
 - `ColumnLimit: 0` — never auto-wrap; break long lines by hand where they read best.
