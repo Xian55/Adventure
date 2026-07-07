@@ -22,4 +22,8 @@ namespace adventure
 	// If the player's melee hitbox is live (and this swing hasn't hit yet), damage every enemy inside the
 	// reach + arc: apply damage, knock them back, stagger (or kill). One resolution per swing.
 	void resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t);
+
+	// Kick: shove every enemy in a short forward cone hard (impulse velocity) and stagger them — the
+	// Dark Messiah environmental-kill move (knock into hazards/off ledges). Cooldown is caller-managed.
+	void tryKick(Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, float reach, float impulse, const EnemyTuning& t);
 } // namespace adventure

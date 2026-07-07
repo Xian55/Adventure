@@ -93,6 +93,17 @@ TEST_CASE("no hit outside the Active phase")
 	CHECK(es[0].health == doctest::Approx(50.0));
 }
 
+TEST_CASE("kick shoves front enemies back and staggers them; misses those behind")
+{
+	EnemyTuning t;
+	std::vector<Enemy> es{enemyAt(0, -1.0f), enemyAt(0, 1.5f)}; // in front, behind
+	tryKick(Vector3{0, 0, 0}, 0.0f, es, 1.6f, 14.0f, t);
+	CHECK(es[0].velocity.z < 0.0f); // front: shoved away (-Z)
+	CHECK(es[0].state == EnemyState::Stagger);
+	CHECK(es[1].velocity.z == doctest::Approx(0.0)); // behind: untouched
+	CHECK(es[1].state == EnemyState::Approach);
+}
+
 TEST_CASE("enemy approaches; stagger and death timers expire")
 {
 	EnemyTuning t;

@@ -6,7 +6,7 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
 |------|----------------|
 | `Melee.{h,cpp}` | Dark Messiah–style directional melee: **hold to wind up (Charge), release to strike**. `beginCharge`/`setSwingDir`/`releaseSwing` + `updateMelee` (Idle→Charge→Active→Recovery→Idle). `SwingDir` from WASD (Left/Right/Forward/Overhead); **Neutral (no key) alternates Left/Right**. `chargeFraction` scales damage (hold longer = stronger). `WeaponDef` from Lua. Same charge/release pattern a **bow draw** will reuse (M5). |
 | `Enemy.h` | `Enemy` struct (pos/vel/health/`EnemyState` Approach/Stagger/Dead/timer/dims) — a skeleton. Rendered as a placeholder box until sprites. |
-| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI + knockback integration + stagger/death timers) and `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage/knockback/stagger/kill, one hit per swing). `EnemyTuning`. |
+| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI + knockback integration + stagger/death timers), `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage/knockback/stagger/kill, one hit per swing), `tryKick` (shove enemies in a forward cone hard + stagger — environmental-kill move, cooldown caller-managed). `EnemyTuning`. |
 
 ## Flow
 - Input buffers a swing (`requestSwing`, on attack press). `updateMelee` runs each **fixed step** (in

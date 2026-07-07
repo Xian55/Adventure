@@ -99,4 +99,29 @@ namespace adventure
 		if (anyHit)
 			melee.hitThisSwing = true; // this swing has connected; don't hit again
 	}
+
+	void tryKick(Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, float reach, float impulse, const EnemyTuning& t)
+	{
+		const float fx = std::sin(playerYaw);
+		const float fz = -std::cos(playerYaw);
+		const float cosHalf = std::cos(0.9f); // ~50deg half-cone in front
+
+		for (Enemy& e : enemies)
+		{
+			if (!e.active || e.state == EnemyState::Dead)
+				continue;
+			const float tx = e.position.x - playerPos.x;
+			const float tz = e.position.z - playerPos.z;
+			const float d = std::sqrt(tx * tx + tz * tz);
+			if (d > reach + e.radius)
+				continue;
+			if (d > 0.0001f && (fx * tx + fz * tz) / d < cosHalf)
+				continue;
+
+			e.velocity.x += fx * impulse;
+			e.velocity.z += fz * impulse;
+			e.state = EnemyState::Stagger;
+			e.stateTimer = t.staggerTime;
+		}
+	}
 } // namespace adventure

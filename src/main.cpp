@@ -50,6 +50,7 @@ int main()
 	MoveTuning tune;
 	WeaponDef weapon;
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
+	float kickReach = 1.6f, kickImpulse = 14.0f;
 	auto loadTuning = [&]() {
 		sScript->runFile("scripts/tuning.lua");
 		tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
@@ -74,6 +75,8 @@ int main()
 		weapon.knockback = (float)sScript->evalNumber("sword.knockback", weapon.knockback);
 		weapon.chargeMax = (float)sScript->evalNumber("sword.chargeMax", weapon.chargeMax);
 		weapon.chargeDamageMul = (float)sScript->evalNumber("sword.chargeDamageMul", weapon.chargeDamageMul);
+		kickReach = (float)sScript->evalNumber("tuning.kickReach", kickReach);
+		kickImpulse = (float)sScript->evalNumber("tuning.kickImpulse", kickImpulse);
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -142,6 +145,7 @@ int main()
 	bool noclip = false;
 	JumpMeter jumpMeter;
 	MeleeState melee;
+	float kickCooldown = 0.0f;
 	float accumulator = 0.0f;
 	float bobPhase = 0.0f;
 
@@ -181,6 +185,11 @@ int main()
 		}
 		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
 			releaseSwing(melee);
+		if (IsKeyPressed(KEY_F) && kickCooldown <= 0.0f) // kick: knock enemies back
+		{
+			tryKick(player.position, player.yaw, enemies, kickReach, kickImpulse, enemyTune);
+			kickCooldown = 0.7f;
+		}
 		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
 		{
 			if (melee.phase == MeleePhase::Idle)
@@ -234,6 +243,8 @@ int main()
 				updateMelee(melee, weapon, config::kFixedDt);
 				resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune);
 				updateEnemies(enemies, player.position, enemyTune, config::kFixedDt);
+				if (kickCooldown > 0.0f)
+					kickCooldown -= config::kFixedDt;
 				accumulator -= config::kFixedDt;
 			}
 		}
