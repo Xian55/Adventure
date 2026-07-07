@@ -6,7 +6,7 @@ raylib window), fully unit-tested. Format authority: the `adv-map` skill.
 | File | Responsibility |
 |------|----------------|
 | `MapTypes.h` | Data types: `Face`/`Brush`/`Entity`/`MapData` (map space) and `MeshData`/`CollisionBrush`/`WorldGeometry` (engine space). |
-| `MapParser.{h,cpp}` | Valve 220 text → `MapData`. Tolerant tokenizer+parser: `parseMap` returns `ok=false`+error on malformed input, **never throws**. Keeps raw map coords. |
+| `MapParser.{h,cpp}` | Quake `.map` text → `MapData`. Handles **both Valve 220 and Standard Quake** face formats (Standard synthesizes tex axes from the normal via the baseaxis table) — so real id/Arcane-Dimensions maps load. Tolerant: `parseMap` returns `ok=false`+error on malformed input, **never throws**. |
 | `BrushGeometry.{h,cpp}` | `MapData` → `WorldGeometry`: per-brush convex faces via plane clipping → per-texture `MeshData` + collision planes. Applies Z-up→Y-up + `kMapScale`. Also `mapToEngine()` for entity placement. |
 | `CollisionWorld.{h,cpp}` | Holds the collision brushes; `overlaps(center, halfExtents)` = AABB vs any convex brush (broadphase AABB filter + Minkowski-expanded plane test). Used by `player/PlayerController`. |
 

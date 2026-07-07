@@ -60,6 +60,29 @@ TEST_CASE("face plane points and Valve texture axes are parsed")
 	CHECK(f.scaleX == doctest::Approx(1.0));
 }
 
+TEST_CASE("parses Standard Quake face format (no texture-axis brackets)")
+{
+	// Standard faces: `TEX offx offy rot sx sy` (as in id / Arcane Dimensions maps).
+	const char* stdCube =
+	    "{\n\"classname\" \"worldspawn\"\n{\n"
+	    "( -64 -64 -64 ) ( -64 -64 64 ) ( -64 64 -64 ) metal1_3 0 0 0 1 1\n"
+	    "( 64 64 64 ) ( 64 -64 64 ) ( 64 64 -64 ) metal1_3 0 0 0 1 1\n"
+	    "( -64 -64 -64 ) ( 64 -64 -64 ) ( -64 -64 64 ) metal1_3 8 16 0 1 1\n"
+	    "( 64 64 64 ) ( -64 64 64 ) ( 64 64 -64 ) metal1_3 0 0 0 1 1\n"
+	    "( -64 -64 -64 ) ( -64 64 -64 ) ( 64 -64 -64 ) metal1_3 0 0 0 2 2\n"
+	    "( 64 64 64 ) ( 64 -64 64 ) ( -64 64 64 ) metal1_3 0 0 0 1 1\n"
+	    "}\n}\n";
+	MapParseResult r = parseMap(stdCube);
+	REQUIRE(r.ok);
+	REQUIRE(r.data.entities.size() == 1);
+	CHECK(r.data.entities[0].brushes[0].faces.size() == 6);
+	const Face& f = r.data.entities[0].brushes[0].faces[0];
+	CHECK(f.texture == "metal1_3");
+	// axes synthesized from the normal are unit vectors
+	float ul = f.uAxis.x * f.uAxis.x + f.uAxis.y * f.uAxis.y + f.uAxis.z * f.uAxis.z;
+	CHECK(ul == doctest::Approx(1.0));
+}
+
 TEST_CASE("empty input is valid and yields no entities")
 {
 	MapParseResult r = parseMap("");

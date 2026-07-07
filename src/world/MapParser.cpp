@@ -130,6 +130,41 @@ namespace adventure::world
 			return out;
 		}
 
+		// Standard Quake faces give only `offx offy rot sx sy`; synthesize axis-aligned texture axes from
+		// the face normal using Quake's baseaxis table (so Valve-220 and Standard maps share one path).
+		void standardAxes(Face& f, float offx, float offy)
+		{
+			// clang-format off
+			static const float base[18][3] = {
+			    {0, 0, 1},  {1, 0, 0}, {0, -1, 0},   // floor
+			    {0, 0, -1}, {1, 0, 0}, {0, -1, 0},   // ceiling
+			    {1, 0, 0},  {0, 1, 0}, {0, 0, -1},   // west
+			    {-1, 0, 0}, {0, 1, 0}, {0, 0, -1},   // east
+			    {0, 1, 0},  {1, 0, 0}, {0, 0, -1},   // south
+			    {0, -1, 0}, {1, 0, 0}, {0, 0, -1},   // north
+			};
+			// clang-format on
+			const float ax = f.p[1].x - f.p[0].x, ay = f.p[1].y - f.p[0].y, az = f.p[1].z - f.p[0].z;
+			const float bx = f.p[2].x - f.p[0].x, by = f.p[2].y - f.p[0].y, bz = f.p[2].z - f.p[0].z;
+			const float nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+
+			int best = 0;
+			float bestDot = -1e30f;
+			for (int i = 0; i < 6; ++i)
+			{
+				const float d = nx * base[i * 3][0] + ny * base[i * 3][1] + nz * base[i * 3][2];
+				if (d > bestDot)
+				{
+					bestDot = d;
+					best = i;
+				}
+			}
+			const float* u = base[best * 3 + 1];
+			const float* v = base[best * 3 + 2];
+			f.uAxis = Vector4{u[0], u[1], u[2], offx};
+			f.vAxis = Vector4{v[0], v[1], v[2], offy};
+		}
+
 		struct Parser
 		{
 			const std::vector<Token>& t;
@@ -194,10 +229,22 @@ namespace adventure::world
 				if (peek().kind != Tok::Word)
 					return fail("expected texture name");
 				f.texture = next().text;
-				if (!vec4In(f.uAxis) || !vec4In(f.vAxis))
-					return false;
-				if (!number(f.rotation) || !number(f.scaleX) || !number(f.scaleY))
-					return false;
+
+				if (peek().kind == Tok::LBracket) // Valve 220: [ ux uy uz off ] [ vx vy vz off ] rot sx sy
+				{
+					if (!vec4In(f.uAxis) || !vec4In(f.vAxis))
+						return false;
+					if (!number(f.rotation) || !number(f.scaleX) || !number(f.scaleY))
+						return false;
+				}
+				else // Standard Quake: offx offy rot sx sy
+				{
+					float offx = 0.0f, offy = 0.0f;
+					if (!number(offx) || !number(offy) || !number(f.rotation) || !number(f.scaleX) ||
+					    !number(f.scaleY))
+						return false;
+					standardAxes(f, offx, offy);
+				}
 				return true;
 			}
 
