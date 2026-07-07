@@ -39,11 +39,16 @@ brushes = []
 # Big floor, top at engine y=0.
 brushes.append(box(e(-14), e(14), e(-14), e(14), e(-0.5), 0, "floor_tile_01"))
 
-# Jump-height staircase along +X: block tops at 0.5,1.0,...,3.0 engine.
-for i in range(1, 7):
-    top = e(0.5 * i)
-    x0 = e(2 + i * 2.2)
-    brushes.append(box(x0, x0 + e(1.6), e(-2), e(2), 0, top, "stone_wall_01"))
+# Walkable staircase along +X: 6 connected steps rising 0.3 each (<= stepHeight 0.5, walk up, no jump).
+for i in range(6):
+    top = e(0.3 * (i + 1))
+    x0 = e(2) + i * e(1.5)
+    brushes.append(box(x0, x0 + e(1.5), e(-2.5), e(2.5), e(-0.5), top, "stone_wall_01"))
+
+# Jump-onto pillars (test jump height ~1.1): tops at 0.6, 1.0, 1.4 engine, in the +X/+Y corner.
+for i, top in enumerate((0.6, 1.0, 1.4)):
+    x0 = e(3 + i * 2.5)
+    brushes.append(box(x0, x0 + e(1.2), e(5), e(6.2), e(-0.5), e(top), "stone_wall_01"))
 
 # Crouch bars along -X: overhead bars with bottoms at decreasing clearance (engine).
 for i, clear in enumerate((1.9, 1.6, 1.3, 1.0)):

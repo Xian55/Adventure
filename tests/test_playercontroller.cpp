@@ -97,6 +97,43 @@ TEST_CASE("crouch then stand keeps the player mobile (no stuck-after-crouch)")
 	CHECK(p.position.x > x1 + 0.05f);
 }
 
+TEST_CASE("player walks up a step within stepHeight (no jump needed)")
+{
+	// Floor top y=0 + a 0.3-high step covering engine x>=1 (map x>=32).
+	std::string mapText = worldspawnOf(boxBrush(-256, 256, -256, 256, -64, 0) +  // floor
+	                                   boxBrush(32, 256, -256, 256, -64, 9.6f)); // step top y=0.3
+	world::CollisionWorld w = worldFrom(mapText);
+	MoveTuning t;
+	Player p;
+	p.position = {-1.0f, t.height * 0.5f, 0.0f};
+	p.onGround = true;
+	MoveInput in;
+	in.right = 1.0f; // walk toward +X into the step
+	in.sprint = true;
+	step(p, in, w, t, 45);                        // stop while still on the step (it ends at x=8)
+	CHECK(p.position.x > 1.0f);                   // climbed onto the step
+	CHECK(p.position.x < 8.0f);                   // still on it, not off the far edge
+	CHECK(p.position.y > t.height * 0.5f + 0.2f); // rose ~0.3 (stood on the step)
+	CHECK(p.onGround);
+}
+
+TEST_CASE("a ledge taller than stepHeight still blocks (no auto-climb)")
+{
+	// A 1.0-high wall (map z 32) exceeds stepHeight 0.5 -> blocked, not climbed.
+	std::string mapText = worldspawnOf(boxBrush(-256, 256, -256, 256, -64, 0) +
+	                                   boxBrush(32, 256, -256, 256, -64, 32));
+	world::CollisionWorld w = worldFrom(mapText);
+	MoveTuning t;
+	Player p;
+	p.position = {-1.0f, t.height * 0.5f, 0.0f};
+	p.onGround = true;
+	MoveInput in;
+	in.right = 1.0f;
+	in.sprint = true;
+	step(p, in, w, t, 180);
+	CHECK(p.position.x < 1.0f); // stopped at the wall, did not climb
+}
+
 TEST_CASE("player can move away from a wall unobstructed")
 {
 	world::CollisionWorld w = worldFrom(boxMap(0, 256, -256, 256, -256, 256));

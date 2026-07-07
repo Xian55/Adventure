@@ -14,6 +14,10 @@ First-person player: state + movement/collision. Pure logic (no raylib window) -
   (air-strafe/bhop emerges). Gravity each step; jump sets `vel.y` when `onGround`.
 - **Collision**: integrate X, then Z (walls slide), then Y; each axis reverts + zeroes its velocity if the
   new center overlaps a solid. `onGround` set when a downward Y move is blocked.
+- **Stair step-up**: a blocked grounded move retries lifted by `stepHeight` (0.5) and settles onto the step,
+  so you walk stairs/ledges ≤ stepHeight instead of jumping; taller ledges still block. (`updatePlayer`.)
+- **Crouch**: shifts the center to keep feet planted; standing up needs headroom (inset test box so
+  floor-contact isn't a false block).
 - Fixed timestep (`kFixedDt`, 60 Hz) — run in `main`'s accumulator loop. Mouse-look updates `yaw`/`pitch`
   per display frame (smooth); the camera is built from the player each frame.
 

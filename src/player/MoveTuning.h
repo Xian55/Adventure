@@ -18,6 +18,7 @@ namespace adventure
 		float radius = 0.35f; // XZ half-extent
 		float height = 1.7f;  // standing full height
 		float crouchHeight = 1.0f;
-		float eyeHeight = 1.5f; // eye above feet (standing)
+		float eyeHeight = 1.5f;  // eye above feet (standing)
+		float stepHeight = 0.5f; // auto-climb ledges up to this (stairs)
 	};
 } // namespace adventure

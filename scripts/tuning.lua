@@ -9,6 +9,7 @@ tuning = {
 	stopSpeed   = 3.0,
 	gravity     = 25.0,  -- snappier jump arc
 	jumpSpeed   = 7.5,
+	stepHeight  = 0.5,   -- auto-climb stairs up to this (no jump needed)
 
 	-- view feel
 	bobFreq   = 9.0,   -- weapon/head bob cadence

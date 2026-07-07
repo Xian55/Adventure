@@ -71,6 +71,7 @@ int main()
 	tune.gravity = (float)sScript->evalNumber("tuning.gravity", tune.gravity);
 	tune.jumpSpeed = (float)sScript->evalNumber("tuning.jumpSpeed", tune.jumpSpeed);
 	tune.sprintSpeed = (float)sScript->evalNumber("tuning.sprintSpeed", tune.sprintSpeed);
+	tune.stepHeight = (float)sScript->evalNumber("tuning.stepHeight", tune.stepHeight);
 	const float bobFreq = (float)sScript->evalNumber("tuning.bobFreq", 9.0);
 	const float weaponBob = (float)sScript->evalNumber("tuning.weaponBob", 0.02);
 	const float headBob = (float)sScript->evalNumber("tuning.headBob", 0.035);

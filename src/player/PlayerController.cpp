@@ -115,11 +115,49 @@ namespace adventure
 
 		p.velocity.y -= t.gravity * dt;
 
-		// Axis-separated integration: X, then Z (walls slide), then Y (floor/ceiling + ground detect).
-		if (moveAxis(p, h, world, 0, p.velocity.x * dt))
-			p.velocity.x = 0.0f;
-		if (moveAxis(p, h, world, 2, p.velocity.z * dt))
-			p.velocity.z = 0.0f;
+		// Axis-separated horizontal integration: X, then Z (walls slide).
+		const float velX = p.velocity.x, velZ = p.velocity.z;
+		const Vector3 preH = p.position;
+		bool bx = moveAxis(p, h, world, 0, velX * dt);
+		bool bz = moveAxis(p, h, world, 2, velZ * dt);
+
+		// Stair step-up: if a grounded move was blocked, retry lifted by stepHeight and settle onto the
+		// step. Genuine walls (taller than stepHeight) fail the retry and keep the wall-slide behaviour.
+		bool stepped = false;
+		if ((bx || bz) && p.onGround && (velX != 0.0f || velZ != 0.0f))
+		{
+			const Vector3 flat = p.position;
+			const Vector3 lifted = {preH.x, preH.y + t.stepHeight, preH.z};
+			if (!world.overlaps(lifted, h))
+			{
+				p.position = lifted;
+				moveAxis(p, h, world, 0, velX * dt);
+				moveAxis(p, h, world, 2, velZ * dt);
+				const bool advanced = std::fabs(p.position.x - flat.x) > 0.001f ||
+				                      std::fabs(p.position.z - flat.z) > 0.001f;
+				float dropped = 0.0f;
+				bool landed = false;
+				while (dropped <= t.stepHeight + 0.001f)
+				{
+					if (moveAxis(p, h, world, 1, -0.04f)) // hit the step surface
+					{
+						landed = true;
+						break;
+					}
+					dropped += 0.04f;
+				}
+				stepped = advanced && landed;
+			}
+			if (!stepped)
+				p.position = flat;
+		}
+		if (!stepped)
+		{
+			if (bx)
+				p.velocity.x = 0.0f;
+			if (bz)
+				p.velocity.z = 0.0f;
+		}
 
 		bool blockedY = moveAxis(p, h, world, 1, p.velocity.y * dt);
 		if (blockedY)
