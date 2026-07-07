@@ -52,8 +52,18 @@ namespace adventure
 		if (!hitboxActive(melee) || melee.hitThisSwing)
 			return;
 
-		const float fx = std::sin(playerYaw);
-		const float fz = -std::cos(playerYaw);
+		// Aim shifts with the swing direction (left/right slashes reach to that side); charge scales power.
+		float aimYaw = playerYaw;
+		if (melee.resolved == SwingDir::Left)
+			aimYaw -= weapon.arc * 0.35f;
+		else if (melee.resolved == SwingDir::Right)
+			aimYaw += weapon.arc * 0.35f;
+		const float charge = chargeFraction(melee, weapon);
+		const float dmg = weapon.damage * (1.0f + charge * weapon.chargeDamageMul);
+		const float kb = weapon.knockback * (1.0f + charge * 0.5f);
+
+		const float fx = std::sin(aimYaw);
+		const float fz = -std::cos(aimYaw);
 		const float cosHalf = std::cos(weapon.arc * 0.5f);
 		bool anyHit = false;
 
@@ -70,9 +80,9 @@ namespace adventure
 			if (d > 0.0001f && (fx * tx + fz * tz) / d < cosHalf) // outside the swing arc
 				continue;
 
-			e.health -= weapon.damage;
-			e.velocity.x += fx * weapon.knockback;
-			e.velocity.z += fz * weapon.knockback;
+			e.health -= dmg;
+			e.velocity.x += fx * kb;
+			e.velocity.z += fz * kb;
 			if (e.health <= 0.0f)
 			{
 				e.state = EnemyState::Dead;

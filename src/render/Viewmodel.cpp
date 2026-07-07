@@ -8,7 +8,7 @@
 
 namespace adventure
 {
-	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress)
+	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress, int swingDir, float charge)
 	{
 		Camera3D vcam{};
 		vcam.position = Vector3{0, 0, 0};
@@ -41,31 +41,54 @@ namespace adventure
 			rlPopMatrix();
 		}
 
-		// Sword swing offsets from the melee state: windup raises back, active slashes down-forward,
-		// recovery returns to rest.
-		float swingZ = 0.0f, push = 0.0f, rise = 0.0f;
-		if (meleePhase == 1) // Windup
+		// Directional sword pose: a rest pose, a per-direction cock (wound up during Charge) and a strike
+		// (played over Active), returning to rest over Recovery.
+		struct Pose
 		{
-			swingZ = -45.0f * meleeProgress;
-			rise = 0.1f * meleeProgress;
-		}
-		else if (meleePhase == 2) // Active
+			float rotZ, rotX, push, rise;
+		};
+		auto mix = [](Pose a, Pose b, float t) {
+			return Pose{a.rotZ + (b.rotZ - a.rotZ) * t, a.rotX + (b.rotX - a.rotX) * t, a.push + (b.push - a.push) * t, a.rise + (b.rise - a.rise) * t};
+		};
+		const Pose rest{5.0f, -6.0f, 0.0f, 0.0f};
+		Pose cock = rest, strike = rest;
+		switch (swingDir)
 		{
-			swingZ = -45.0f + 130.0f * meleeProgress;
-			push = 0.2f * sinf(meleeProgress * 3.14159f);
-			rise = 0.1f * (1.0f - meleeProgress);
+		case 1:
+			cock = {45, -6, 0, 0.05f};
+			strike = {-75, -6, 0.08f, 0};
+			break; // Left
+		case 2:
+			cock = {-35, -6, 0, 0.05f};
+			strike = {95, -6, 0.08f, 0};
+			break; // Right
+		case 3:
+			cock = {5, -6, 0.14f, 0.04f};
+			strike = {5, -6, -0.28f, 0};
+			break; // Forward thrust
+		case 4:
+			cock = {5, -70, 0, 0.18f};
+			strike = {5, 50, 0.05f, -0.04f};
+			break; // Overhead chop
+		default:
+			cock = {40, -6, 0, 0.05f};
+			strike = {-70, -6, 0.06f, 0};
+			break; // Neutral-ish
 		}
-		else if (meleePhase == 3) // Recovery
-		{
-			swingZ = 85.0f * (1.0f - meleeProgress);
-		}
+		Pose p = rest;
+		if (meleePhase == 1) // Charge: wind into the cock pose, then hold
+			p = mix(rest, cock, fminf(1.0f, charge * 3.0f + 0.15f));
+		else if (meleePhase == 2) // Active: strike
+			p = mix(cock, strike, meleeProgress);
+		else if (meleePhase == 3) // Recovery: return
+			p = mix(strike, rest, meleeProgress);
 
 		// Sword (right hand): fist on the hilt, blade pointing straight up.
 		{
 			rlPushMatrix();
-			rlTranslatef(0.42f + bobX, -0.32f + bobY + rise, -0.8f - push);
-			rlRotatef(5.0f + swingZ, 0, 0, 1);
-			rlRotatef(-6.0f, 1, 0, 0);
+			rlTranslatef(0.42f + bobX, -0.32f + bobY + p.rise, -0.8f - p.push);
+			rlRotatef(p.rotZ, 0, 0, 1);
+			rlRotatef(p.rotX, 1, 0, 0);
 			DrawCube(Vector3{0, -0.14f, 0.0f}, 0.16f, 0.12f, 0.15f, Color{110, 112, 122, 255}); // bracer
 			DrawCubeWires(Vector3{0, -0.14f, 0.0f}, 0.16f, 0.12f, 0.15f, Color{70, 72, 82, 255});
 			DrawCube(Vector3{0, 0.0f, 0.0f}, 0.14f, 0.16f, 0.13f, skin); // fist

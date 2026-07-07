@@ -41,6 +41,13 @@ require Combat skill), staves (slow AoE stun, no shield), armor (defense + skill
 **Our lightweight cut**: keep the tree shape + gating + quest/secret point income, trim the node count. All
 trees/nodes/costs/effects and weapon defs live in **Lua**; C++ holds earned/spent state + applies effects.
 
+## Combat feel (M2 polish / M4)
+- **Rage → Berserk** (Dark Messiah): repeated attacks fill a rage meter; when full, the player can trigger a
+  timed **berserk** state (bonus damage/speed, maybe instant-kills). A combat resource — meter on the HUD,
+  fills on hits landed, drains over time; berserk toggles a buff. Fits after the M2 slice; ties to M4 stats.
+- **Charge/release is a shared pattern**: the melee wind-up-and-release (`combat/Melee`) is the same shape a
+  **bow draw** uses (hold to draw, release to fire) — reuse it for ranged at M5 rather than re-inventing.
+
 ## Notes
 - These reinforce the existing plan (M3 inventory, M4 stats, M5 spells) rather than adding new pillars.
 - When promoting an item, add its acceptance criteria + tests up front (per `adv-feature`).

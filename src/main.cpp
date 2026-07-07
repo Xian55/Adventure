@@ -66,13 +66,14 @@ int main()
 		headBob = (float)sScript->evalNumber("tuning.headBob", headBob);
 
 		sScript->runFile("scripts/weapons/sword.lua");
-		weapon.windup = (float)sScript->evalNumber("sword.windup", weapon.windup);
 		weapon.active = (float)sScript->evalNumber("sword.active", weapon.active);
 		weapon.recovery = (float)sScript->evalNumber("sword.recovery", weapon.recovery);
 		weapon.reach = (float)sScript->evalNumber("sword.reach", weapon.reach);
 		weapon.arc = (float)sScript->evalNumber("sword.arc", weapon.arc);
 		weapon.damage = (float)sScript->evalNumber("sword.damage", weapon.damage);
 		weapon.knockback = (float)sScript->evalNumber("sword.knockback", weapon.knockback);
+		weapon.chargeMax = (float)sScript->evalNumber("sword.chargeMax", weapon.chargeMax);
+		weapon.chargeDamageMul = (float)sScript->evalNumber("sword.chargeDamageMul", weapon.chargeDamageMul);
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -162,8 +163,31 @@ int main()
 			loadMap(mapPath); // hot-reload level
 		if (IsKeyPressed(KEY_V))
 			noclip = !noclip; // free-fly / level inspection
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || shotPath)
-			requestSwing(melee); // buffered; consumed by the melee state machine (shotPath: auto-swing for a mid-swing screenshot)
+		// Attack: hold LMB to wind up, the held movement key picks the direction, release to strike.
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+			beginCharge(melee);
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+		{
+			SwingDir d = SwingDir::Neutral;
+			if (IsKeyDown(KEY_A))
+				d = SwingDir::Left;
+			else if (IsKeyDown(KEY_D))
+				d = SwingDir::Right;
+			else if (IsKeyDown(KEY_W))
+				d = SwingDir::Forward;
+			else if (IsKeyDown(KEY_S))
+				d = SwingDir::Overhead;
+			setSwingDir(melee, d);
+		}
+		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+			releaseSwing(melee);
+		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
+		{
+			if (melee.phase == MeleePhase::Idle)
+				beginCharge(melee);
+			else if (melee.phase == MeleePhase::Charge && melee.chargeTime > 0.12f)
+				releaseSwing(melee);
+		}
 
 		// Mouse look (per display frame for smoothness).
 		{
@@ -248,7 +272,10 @@ int main()
 			}
 			EndMode3D();
 			if (!noclip)
-				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon));
+			{
+				int vmDir = (melee.phase == MeleePhase::Charge) ? (int)melee.dir : (int)melee.resolved;
+				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon));
+			}
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
 		}

@@ -5,7 +5,8 @@ Retro look = low-res render + point upscale + fog + dither. Status: **M0 + M1 do
 geometry/collision (`src/world`), world rendering (`render/WorldRenderer`), Quake first-person movement +
 AABB-vs-brush collision (`src/player`), torch+sword viewmodel (`render/Viewmodel`), Lua feel-tuning. **Next:
 M2 combat slice** (melee state machine + sweeping hitbox, kick, shield, one skeleton). Controls: WASD +
-mouse-look, Shift sprint, Space jump, Ctrl crouch, Left-click attack. Dev tools: F3 metrics, F4 telemetry (jump/dims/pos),
+mouse-look, Shift sprint, Space jump, Ctrl crouch, **hold Left-click to wind up + WASD to aim (A/D slash, W thrust, S overhead) + release to
+strike**. Dev tools: F3 metrics, F4 telemetry (jump/dims/pos),
 **V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**. Default map `maps/training.map`; override
 with `ADVENTURE_MAP` (loads real Quake/Arcane-Dimensions `.map` too); `tools/gen_room.py`/`gen_training.py`
 emit maps.

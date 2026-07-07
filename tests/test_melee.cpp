@@ -8,9 +8,9 @@ namespace
 	WeaponDef def()
 	{
 		WeaponDef d;
-		d.windup = 0.10f;
 		d.active = 0.05f;
 		d.recovery = 0.20f;
+		d.chargeMax = 0.5f;
 		return d;
 	}
 
@@ -20,21 +20,29 @@ namespace
 		for (float t = 0.0f; t < total; t += dt)
 			updateMelee(s, d, dt);
 	}
+
+	void fullSwing(MeleeState& s, const WeaponDef& d) // release -> back to Idle
+	{
+		releaseSwing(s);
+		advance(s, d, d.active + d.recovery + 0.05f);
+	}
 } // namespace
 
-TEST_CASE("swing cycles Idle -> Windup -> Active -> Recovery -> Idle")
+TEST_CASE("charge then release: Idle -> Charge -> Active -> Recovery -> Idle")
 {
 	WeaponDef d = def();
 	MeleeState s;
 	CHECK(s.phase == MeleePhase::Idle);
 
-	requestSwing(s);
-	updateMelee(s, d, 0.0f); // Idle consumes the buffered swing
-	CHECK(s.phase == MeleePhase::Windup);
+	beginCharge(s);
+	CHECK(s.phase == MeleePhase::Charge);
+	advance(s, d, 0.2f);
+	CHECK(s.phase == MeleePhase::Charge); // stays charging until release
+	CHECK(s.chargeTime == doctest::Approx(0.2).epsilon(0.03));
 
-	advance(s, d, d.windup + 0.001f);
+	releaseSwing(s);
 	CHECK(s.phase == MeleePhase::Active);
-	CHECK(hitboxActive(s)); // hitbox live only during Active
+	CHECK(hitboxActive(s));
 
 	advance(s, d, d.active + 0.001f);
 	CHECK(s.phase == MeleePhase::Recovery);
@@ -44,48 +52,57 @@ TEST_CASE("swing cycles Idle -> Windup -> Active -> Recovery -> Idle")
 	CHECK(s.phase == MeleePhase::Idle);
 }
 
-TEST_CASE("a buffered input chains into a combo during Recovery")
+TEST_CASE("held direction is used; Neutral alternates Left/Right")
 {
 	WeaponDef d = def();
 	MeleeState s;
-	requestSwing(s);
-	updateMelee(s, d, 0.0f);
-	advance(s, d, d.windup + 0.001f);
-	advance(s, d, d.active + 0.001f);
-	REQUIRE(s.phase == MeleePhase::Recovery);
 
-	requestSwing(s);
-	updateMelee(s, d, 1.0f / 60.0f);
-	CHECK(s.phase == MeleePhase::Windup);
-	CHECK(s.comboStep == 1);
+	beginCharge(s);
+	setSwingDir(s, SwingDir::Overhead);
+	releaseSwing(s);
+	CHECK(s.resolved == SwingDir::Overhead);
+	advance(s, d, d.active + d.recovery + 0.05f);
+
+	beginCharge(s); // no direction -> Neutral -> Left
+	fullSwing(s, d);
+	CHECK(s.resolved == SwingDir::Left);
+
+	beginCharge(s); // Neutral again -> Right
+	fullSwing(s, d);
+	CHECK(s.resolved == SwingDir::Right);
 }
 
-TEST_CASE("hitThisSwing is cleared at each swing start")
+TEST_CASE("chargeFraction scales 0..1 and clamps at chargeMax")
 {
-	WeaponDef d = def();
+	WeaponDef d = def(); // chargeMax 0.5
 	MeleeState s;
-	requestSwing(s);
-	updateMelee(s, d, 0.0f);
-	s.hitThisSwing = true; // pretend a hit landed this swing
-	advance(s, d, d.windup + 0.001f);
-	advance(s, d, d.active + 0.001f); // Recovery
-	requestSwing(s);
-	updateMelee(s, d, 1.0f / 60.0f); // new swing
-	CHECK_FALSE(s.hitThisSwing);
+	beginCharge(s);
+	advance(s, d, 0.25f);
+	CHECK(chargeFraction(s, d) == doctest::Approx(0.5).epsilon(0.06));
+	advance(s, d, 1.0f);
+	CHECK(chargeFraction(s, d) == doctest::Approx(1.0));
 }
 
-TEST_CASE("phaseProgress stays in 0..1 and handles zero-duration phases")
+TEST_CASE("transitions are ignored out of context")
 {
-	WeaponDef d;
-	d.windup = 0.0f;
-	d.active = 0.0f;
-	d.recovery = 0.0f;
 	MeleeState s;
-	requestSwing(s);
-	updateMelee(s, d, 0.0f); // Windup, but windup==0
-	CHECK(phaseProgress(s, d) == doctest::Approx(1.0));
-	CHECK(phaseProgress(s, def()) >= 0.0f);
+	setSwingDir(s, SwingDir::Left); // no-op in Idle
+	releaseSwing(s);                // no-op in Idle
+	CHECK(s.phase == MeleePhase::Idle);
 
-	updateMelee(s, d, 1.0f / 60.0f); // zero-duration windup advances immediately
+	beginCharge(s);
+	releaseSwing(s); // Active
+	beginCharge(s);  // ignored (not Idle)
 	CHECK(s.phase == MeleePhase::Active);
+}
+
+TEST_CASE("hitThisSwing is cleared at each charge start")
+{
+	WeaponDef d = def();
+	MeleeState s;
+	beginCharge(s);
+	fullSwing(s, d);
+	s.hitThisSwing = true;
+	beginCharge(s);
+	CHECK_FALSE(s.hitThisSwing);
 }
