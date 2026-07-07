@@ -10,13 +10,18 @@ namespace adventure
 		s.timer = 0.0f;
 		s.chargeTime = 0.0f;
 		s.dir = SwingDir::Neutral;
+		s.dirLocked = false;
 		s.hitThisSwing = false;
 	}
 
+	// Snapshot the first direction chosen during the charge; ignore later key changes (and Neutral, so a
+	// key pressed after the button still counts). The picked direction sticks until release.
 	void setSwingDir(MeleeState& s, SwingDir d)
 	{
-		if (s.phase == MeleePhase::Charge)
-			s.dir = d;
+		if (s.phase != MeleePhase::Charge || s.dirLocked || d == SwingDir::Neutral)
+			return;
+		s.dir = d;
+		s.dirLocked = true;
 	}
 
 	void releaseSwing(MeleeState& s)

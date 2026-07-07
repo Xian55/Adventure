@@ -72,6 +72,29 @@ TEST_CASE("held direction is used; Neutral alternates Left/Right")
 	CHECK(s.resolved == SwingDir::Right);
 }
 
+TEST_CASE("swing direction snapshots at first pick and ignores later key changes")
+{
+	WeaponDef d = def();
+	MeleeState s;
+
+	// First non-neutral key wins; switching keys mid-charge does nothing.
+	beginCharge(s);
+	setSwingDir(s, SwingDir::Left);
+	setSwingDir(s, SwingDir::Right);    // ignored — already locked
+	setSwingDir(s, SwingDir::Overhead); // ignored
+	releaseSwing(s);
+	CHECK(s.resolved == SwingDir::Left);
+	advance(s, d, d.active + d.recovery + 0.05f);
+
+	// A key pressed a little after the button (Neutral first) still registers and then locks.
+	beginCharge(s);
+	setSwingDir(s, SwingDir::Neutral); // no key yet -> does not lock
+	setSwingDir(s, SwingDir::Forward); // pressed during the hold -> locks
+	setSwingDir(s, SwingDir::Left);    // ignored
+	releaseSwing(s);
+	CHECK(s.resolved == SwingDir::Forward);
+}
+
 TEST_CASE("chargeFraction scales 0..1 and clamps at chargeMax")
 {
 	WeaponDef d = def(); // chargeMax 0.5

@@ -41,6 +41,7 @@ namespace adventure
 		float chargeTime = 0.0f; // time held in Charge (drives charge damage bonus)
 		SwingDir dir = SwingDir::Neutral;
 		SwingDir resolved = SwingDir::Neutral; // effective dir for the current swing (Neutral -> alternating)
+		bool dirLocked = false;                // once a direction is picked in a charge it snapshots; later keys ignored
 		bool neutralLeft = true;               // side the next Neutral swing takes (alternates)
 		bool hitThisSwing = false;             // hit-resolution debounce; cleared at swing start
 	};
