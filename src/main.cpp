@@ -5,6 +5,7 @@
 #include "core/Metrics.h"
 #include "core/ProfileReport.h"
 #include "lua/ScriptEngine.h"
+#include "player/JumpMeter.h"
 #include "player/PlayerController.h"
 #include "render/MetricsOverlay.h"
 #include "render/Renderer.h"
@@ -45,7 +46,9 @@ int main()
 
 	const Color fog = Color{26, 28, 40, 255};
 
-	char* mapText = LoadFileText("maps/room.map");
+	const char* mapEnv = getenv("ADVENTURE_MAP");
+	const char* mapPath = mapEnv ? mapEnv : "maps/training.map";
+	char* mapText = LoadFileText(mapPath);
 	world::MapParseResult mp = world::parseMap(mapText ? mapText : "");
 	if (mapText)
 		UnloadFileText(mapText);
@@ -88,6 +91,8 @@ int main()
 	int frame = 0;
 
 	bool showMetrics = true;
+	bool showTelemetry = true;
+	JumpMeter jumpMeter;
 	float accumulator = 0.0f;
 	float bobPhase = 0.0f;
 
@@ -101,6 +106,8 @@ int main()
 
 		if (IsKeyPressed(KEY_F3))
 			showMetrics = !showMetrics;
+		if (IsKeyPressed(KEY_F4))
+			showTelemetry = !showTelemetry;
 
 		// Mouse look (per display frame for smoothness).
 		{
@@ -128,6 +135,7 @@ int main()
 			while (accumulator >= config::kFixedDt)
 			{
 				updatePlayer(player, in, collision, tune, config::kFixedDt);
+				jumpMeter.update(player, config::kFixedDt);
 				accumulator -= config::kFixedDt;
 			}
 		}
@@ -172,6 +180,31 @@ int main()
 			renderer.blit();
 		}
 		drawMetricsOverlay(metrics, showMetrics);
+		if (showTelemetry)
+		{
+			int ty = 156; // below the metrics panel (fixed coords; GetRenderHeight is DPI-unreliable)
+			const Color tc = Color{170, 215, 255, 255};
+			DrawText(TextFormat("TRAINING (F4)   speed %.2f   %s%s", JumpMeter::horizontalSpeed(player), player.onGround ? "ground" : "air", player.crouched ? " crouch" : ""),
+			         12,
+			         ty,
+			         20,
+			         tc);
+			DrawText(TextFormat("dims: stand %.2f  crouch %.2f  radius %.2f  eye %.2f", tune.height, tune.crouchHeight, tune.radius, tune.eyeHeight),
+			         12,
+			         ty + 26,
+			         20,
+			         tc);
+			DrawText(TextFormat("jump: dist %.2f  height %.2f  air %.2fs", jumpMeter.last().distance, jumpMeter.last().height, jumpMeter.last().airtime),
+			         12,
+			         ty + 52,
+			         20,
+			         tc);
+			DrawText(TextFormat("max:  dist %.2f  height %.2f", jumpMeter.maxDistance(), jumpMeter.maxHeight()),
+			         12,
+			         ty + 78,
+			         20,
+			         tc);
+		}
 		EndDrawing();
 
 		metrics.endFrame();

@@ -6,7 +6,8 @@ First-person player: state + movement/collision. Pure logic (no raylib window) -
 |------|----------------|
 | `Player.h` | State struct: `position` (AABB center, engine space), `velocity`, `yaw`/`pitch`, `onGround`, `crouched`. |
 | `MoveTuning.h` | Feel constants (speed/accel/friction/gravity/jump) loaded from Lua `tuning`; dims (radius/height/eye) stay in C++. |
-| `PlayerController.{h,cpp}` | `updatePlayer()` — one fixed-step: Quake accelerate/friction + axis-separated swept-AABB collision vs `world::CollisionWorld`. `MoveInput` = forward/right/jump/crouch. |
+| `PlayerController.{h,cpp}` | `updatePlayer()` — one fixed-step: Quake accelerate/friction + axis-separated swept-AABB collision vs `world::CollisionWorld`. `MoveInput` = forward/right/jump/crouch/sprint. |
+| `JumpMeter.{h,cpp}` | Records jumps for tuning/level design: detects takeoff/landing, reports last jump (distance/height/airtime) + session maxima. Pure -> tested. Feeds the F4 telemetry HUD. |
 
 ## How it works
 - **Quake accel**: ground friction, then `accelerate(wishdir, speed, accel)`; air uses a low `airAccel`

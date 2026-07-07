@@ -5,7 +5,9 @@ Retro look = low-res render + point upscale + fog + dither. Status: **M0 + M1 do
 geometry/collision (`src/world`), world rendering (`render/WorldRenderer`), Quake first-person movement +
 AABB-vs-brush collision (`src/player`), torch+sword viewmodel (`render/Viewmodel`), Lua feel-tuning. **Next:
 M2 combat slice** (melee state machine + sweeping hitbox, kick, shield, one skeleton). Controls: WASD +
-mouse-look, Shift sprint, Space jump, Ctrl crouch, F3 metrics.
+mouse-look, Shift sprint, Space jump, Ctrl crouch, F3 metrics, F4 training telemetry (jump dist/height +
+player dims). Default map `maps/training.map` (jump staircase + crouch bars); override with `ADVENTURE_MAP`;
+`tools/gen_room.py`/`gen_training.py` emit maps.
 
 ## Commands
 ```bash
