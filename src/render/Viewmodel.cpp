@@ -8,7 +8,7 @@
 
 namespace adventure
 {
-	void drawViewmodel(float bobPhase, float bobAmount, float t)
+	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress)
 	{
 		Camera3D vcam{};
 		vcam.position = Vector3{0, 0, 0};
@@ -41,11 +41,30 @@ namespace adventure
 			rlPopMatrix();
 		}
 
+		// Sword swing offsets from the melee state: windup raises back, active slashes down-forward,
+		// recovery returns to rest.
+		float swingZ = 0.0f, push = 0.0f, rise = 0.0f;
+		if (meleePhase == 1) // Windup
+		{
+			swingZ = -45.0f * meleeProgress;
+			rise = 0.1f * meleeProgress;
+		}
+		else if (meleePhase == 2) // Active
+		{
+			swingZ = -45.0f + 130.0f * meleeProgress;
+			push = 0.2f * sinf(meleeProgress * 3.14159f);
+			rise = 0.1f * (1.0f - meleeProgress);
+		}
+		else if (meleePhase == 3) // Recovery
+		{
+			swingZ = 85.0f * (1.0f - meleeProgress);
+		}
+
 		// Sword (right hand): fist on the hilt, blade pointing straight up.
 		{
 			rlPushMatrix();
-			rlTranslatef(0.42f + bobX, -0.32f + bobY, -0.8f);
-			rlRotatef(5.0f, 0, 0, 1);
+			rlTranslatef(0.42f + bobX, -0.32f + bobY + rise, -0.8f - push);
+			rlRotatef(5.0f + swingZ, 0, 0, 1);
 			rlRotatef(-6.0f, 1, 0, 0);
 			DrawCube(Vector3{0, -0.14f, 0.0f}, 0.16f, 0.12f, 0.15f, Color{110, 112, 122, 255}); // bracer
 			DrawCubeWires(Vector3{0, -0.14f, 0.0f}, 0.16f, 0.12f, 0.15f, Color{70, 72, 82, 255});

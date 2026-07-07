@@ -4,6 +4,7 @@
 #include "core/Config.h"
 #include "core/Metrics.h"
 #include "core/ProfileReport.h"
+#include "combat/Melee.h"
 #include "lua/ScriptEngine.h"
 #include "player/JumpMeter.h"
 #include "player/PlayerController.h"
@@ -46,6 +47,7 @@ int main()
 
 	// --- Tuning (hot-reloadable: F5) ---
 	MoveTuning tune;
+	WeaponDef weapon;
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
 	auto loadTuning = [&]() {
 		sScript->runFile("scripts/tuning.lua");
@@ -61,6 +63,15 @@ int main()
 		bobFreq = (float)sScript->evalNumber("tuning.bobFreq", bobFreq);
 		weaponBob = (float)sScript->evalNumber("tuning.weaponBob", weaponBob);
 		headBob = (float)sScript->evalNumber("tuning.headBob", headBob);
+
+		sScript->runFile("scripts/weapons/sword.lua");
+		weapon.windup = (float)sScript->evalNumber("sword.windup", weapon.windup);
+		weapon.active = (float)sScript->evalNumber("sword.active", weapon.active);
+		weapon.recovery = (float)sScript->evalNumber("sword.recovery", weapon.recovery);
+		weapon.reach = (float)sScript->evalNumber("sword.reach", weapon.reach);
+		weapon.arc = (float)sScript->evalNumber("sword.arc", weapon.arc);
+		weapon.damage = (float)sScript->evalNumber("sword.damage", weapon.damage);
+		weapon.knockback = (float)sScript->evalNumber("sword.knockback", weapon.knockback);
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -104,6 +115,7 @@ int main()
 	bool showTelemetry = true;
 	bool noclip = false;
 	JumpMeter jumpMeter;
+	MeleeState melee;
 	float accumulator = 0.0f;
 	float bobPhase = 0.0f;
 
@@ -125,6 +137,8 @@ int main()
 			loadMap(mapPath); // hot-reload level
 		if (IsKeyPressed(KEY_V))
 			noclip = !noclip; // free-fly / level inspection
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || shotPath)
+			requestSwing(melee); // buffered; consumed by the melee state machine (shotPath: auto-swing for a mid-swing screenshot)
 
 		// Mouse look (per display frame for smoothness).
 		{
@@ -168,6 +182,7 @@ int main()
 					updatePlayer(player, in, collision, tune, config::kFixedDt);
 					jumpMeter.update(player, config::kFixedDt);
 				}
+				updateMelee(melee, weapon, config::kFixedDt);
 				accumulator -= config::kFixedDt;
 			}
 		}
@@ -194,7 +209,7 @@ int main()
 			world.draw(cam.position);
 			EndMode3D();
 			if (!noclip)
-				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime());
+				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon));
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
 		}
