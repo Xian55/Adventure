@@ -5,6 +5,8 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
 | File | Responsibility |
 |------|----------------|
 | `Melee.{h,cpp}` | Melee swing state machine: `WeaponDef` (timings/reach/arc/damage/knockback, from Lua), `MeleeState` (phase/timer/combo/flags), `updateMelee` (Idle→Windup→Active→Recovery→Idle + Recovery→Windup combo), `hitboxActive` (Active only), `phaseProgress` (0..1 for the sweep + viewmodel). |
+| `Enemy.h` | `Enemy` struct (pos/vel/health/`EnemyState` Approach/Stagger/Dead/timer/dims) — a skeleton. Rendered as a placeholder box until sprites. |
+| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI + knockback integration + stagger/death timers) and `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage/knockback/stagger/kill, one hit per swing). `EnemyTuning`. |
 
 ## Flow
 - Input buffers a swing (`requestSwing`, on attack press). `updateMelee` runs each **fixed step** (in

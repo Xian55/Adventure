@@ -41,6 +41,7 @@ set(ADVENTURE_LIB_SOURCES
     src/player/PlayerController.cpp
     src/player/JumpMeter.cpp
     src/combat/Melee.cpp
+    src/combat/CombatSystem.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
@@ -94,6 +95,7 @@ add_executable(adventure_tests
     tests/test_playercontroller.cpp
     tests/test_jumpmeter.cpp
     tests/test_melee.cpp
+    tests/test_combat.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

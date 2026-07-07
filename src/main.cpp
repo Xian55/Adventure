@@ -4,6 +4,7 @@
 #include "core/Config.h"
 #include "core/Metrics.h"
 #include "core/ProfileReport.h"
+#include "combat/CombatSystem.h"
 #include "combat/Melee.h"
 #include "lua/ScriptEngine.h"
 #include "player/JumpMeter.h"
@@ -81,6 +82,8 @@ int main()
 	world::CollisionWorld collision;
 	world::WorldGeometry geo;
 	Player player;
+	std::vector<Enemy> enemies;
+	EnemyTuning enemyTune;
 	auto loadMap = [&](const char* path) {
 		char* txt = LoadFileText(path);
 		world::MapParseResult r = world::parseMap(txt ? txt : "");
@@ -97,7 +100,29 @@ int main()
 			player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
 		}
 		player.velocity = Vector3{0, 0, 0};
-		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes", (int)geo.meshes.size(), (int)collision.brushCount());
+
+		// Spawn skeletons from monster_skeleton entities; if the map has none, drop a few in front so the
+		// combat slice always has targets.
+		enemies.clear();
+		for (const world::Entity& ent : r.data.entities)
+			if (ent.classname == "monster_skeleton")
+			{
+				Enemy e;
+				e.position = world::mapToEngine(ent.vec3("origin"));
+				e.position.y += e.height * 0.5f;
+				enemies.push_back(e);
+			}
+		if (enemies.empty())
+		{
+			const float floorY = player.position.y - tune.height * 0.5f;
+			for (int i = 0; i < 3; ++i)
+			{
+				Enemy e;
+				e.position = {player.position.x + (i - 1) * 2.0f, floorY + e.height * 0.5f, player.position.z - 5.0f};
+				enemies.push_back(e);
+			}
+		}
+		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size());
 	};
 
 	loadTuning();
@@ -183,6 +208,8 @@ int main()
 					jumpMeter.update(player, config::kFixedDt);
 				}
 				updateMelee(melee, weapon, config::kFixedDt);
+				resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune);
+				updateEnemies(enemies, player.position, enemyTune, config::kFixedDt);
 				accumulator -= config::kFixedDt;
 			}
 		}
@@ -207,6 +234,18 @@ int main()
 			renderer.beginScene(fog);
 			BeginMode3D(cam);
 			world.draw(cam.position);
+			for (const Enemy& e : enemies)
+			{
+				if (!e.active)
+					continue;
+				Color c = e.state == EnemyState::Dead      ? Color{95, 75, 72, 255}
+				          : e.state == EnemyState::Stagger ? Color{225, 120, 110, 255}
+				                                           : Color{205, 200, 185, 255};
+				float bh = e.state == EnemyState::Dead ? e.height * 0.35f : e.height;
+				Vector3 box = {e.position.x, e.position.y - (e.height - bh) * 0.5f, e.position.z};
+				DrawCube(box, e.radius * 2.0f, bh, e.radius * 2.0f, c);
+				DrawCubeWires(box, e.radius * 2.0f, bh, e.radius * 2.0f, Color{40, 40, 45, 255});
+			}
 			EndMode3D();
 			if (!noclip)
 				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon));
