@@ -88,6 +88,7 @@ namespace advbench
 	{
 		static volatile std::size_t sink = 0;
 		sink ^= reinterpret_cast<std::size_t>(&v);
+		(void)sink; // read the volatile so it counts as used (defeats DCE + the warning)
 	}
 } // namespace advbench
 

@@ -18,6 +18,18 @@ endif()
 
 include(cmake/deps.cmake)
 
+# Warnings-as-errors on OUR targets only (deps are SYSTEM / separate libs, exempt).
+if(MSVC)
+    set(ADV_WARN /W4 /WX)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS) # allow portable sscanf/getenv (not the _s variants)
+else()
+    set(ADV_WARN -Wall -Wextra -Werror)
+endif()
+
+# --- minilua: the vendored Lua 5.5 amalgamation as its own lib (never warning-gated) ---
+add_library(minilua STATIC deps/minilua/minilua_impl.c)
+target_include_directories(minilua SYSTEM PUBLIC deps/minilua)
+
 # --- adventure_lib: all game logic as a static library so it can be unit-tested without a window ---
 set(ADVENTURE_LIB_SOURCES
     src/core/Platform.cpp
@@ -34,16 +46,13 @@ set(ADVENTURE_LIB_SOURCES
     src/render/Viewmodel.cpp
     src/lua/ScriptEngine.cpp
     src/lua/Bindings.cpp                 # the only TU that includes LuaBridge
-    deps/minilua/minilua_impl.c          # Lua 5.5 amalgamation, one C TU
 )
 
 add_library(adventure_lib STATIC ${ADVENTURE_LIB_SOURCES})
-target_include_directories(adventure_lib PUBLIC
-    src
-    deps/minilua
-    deps/luabridge
-)
-target_link_libraries(adventure_lib PUBLIC raylib EnTT::EnTT)
+target_include_directories(adventure_lib PUBLIC src)
+target_include_directories(adventure_lib SYSTEM PUBLIC deps/luabridge) # vendored header, exempt from -Werror
+target_link_libraries(adventure_lib PUBLIC raylib EnTT::EnTT minilua)
+target_compile_options(adventure_lib PRIVATE ${ADV_WARN})
 if(WIN32)
     target_link_libraries(adventure_lib PUBLIC psapi)   # GetProcessMemoryInfo / GetProcessTimes
 endif()
@@ -59,6 +68,7 @@ endif()
 # --- adventure: thin executable ---
 add_executable(adventure src/main.cpp)
 target_link_libraries(adventure PRIVATE adventure_lib)
+target_compile_options(adventure PRIVATE ${ADV_WARN})
 
 # Stage runtime data next to the executable so relative paths resolve after
 # ChangeDirectory(GetApplicationDirectory()).
@@ -84,6 +94,7 @@ add_executable(adventure_tests
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)
+target_compile_options(adventure_tests PRIVATE ${ADV_WARN})
 add_test(NAME adventure_tests COMMAND adventure_tests)
 
 # --- adventure_bench: headless micro-benchmarks that fail (nonzero exit) on budget breach ---
@@ -95,6 +106,7 @@ add_executable(adventure_bench
 )
 target_include_directories(adventure_bench PRIVATE bench)
 target_link_libraries(adventure_bench PRIVATE adventure_lib)
+target_compile_options(adventure_bench PRIVATE ${ADV_WARN})
 # The perf gate is meaningful in Release; register it as a CTest test only for optimized builds so
 # Debug runs (slow, noisy) don't produce false regressions.
 add_test(NAME adventure_bench

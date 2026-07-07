@@ -31,3 +31,10 @@ FetchContent_Declare(doctest
     GIT_TAG        v2.4.11
     GIT_SHALLOW    ON)
 FetchContent_MakeAvailable(doctest)
+
+# Treat dependency headers as SYSTEM so their warnings don't trip our -Werror on our own code.
+foreach(dep raylib EnTT doctest)
+    if(TARGET ${dep})
+        set_target_properties(${dep} PROPERTIES SYSTEM ON)
+    endif()
+endforeach()

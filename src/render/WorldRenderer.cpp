@@ -13,28 +13,31 @@ namespace
 	// size so they tile correctly under wrap-repeat.
 	Mesh toMesh(const world::MeshData& md, float texW, float texH)
 	{
-		Mesh m = {0};
+		Mesh m{}; // value-init all fields (avoids -Wmissing-field-initializers)
 		m.vertexCount = md.vertexCount();
 		m.triangleCount = (int)(md.indices.size() / 3);
 
-		m.vertices = (float*)MemAlloc(sizeof(float) * 3 * m.vertexCount);
-		std::memcpy(m.vertices, md.positions.data(), sizeof(float) * 3 * m.vertexCount);
+		const unsigned int vc = (unsigned int)m.vertexCount;
+		const unsigned int ic = (unsigned int)md.indices.size();
 
-		m.normals = (float*)MemAlloc(sizeof(float) * 3 * m.vertexCount);
-		std::memcpy(m.normals, md.normals.data(), sizeof(float) * 3 * m.vertexCount);
+		m.vertices = (float*)MemAlloc(sizeof(float) * 3 * vc);
+		std::memcpy(m.vertices, md.positions.data(), sizeof(float) * 3 * vc);
 
-		m.texcoords = (float*)MemAlloc(sizeof(float) * 2 * m.vertexCount);
+		m.normals = (float*)MemAlloc(sizeof(float) * 3 * vc);
+		std::memcpy(m.normals, md.normals.data(), sizeof(float) * 3 * vc);
+
+		m.texcoords = (float*)MemAlloc(sizeof(float) * 2 * vc);
 		for (int i = 0; i < m.vertexCount; ++i)
 		{
 			m.texcoords[i * 2 + 0] = md.uvs[i * 2 + 0] / texW;
 			m.texcoords[i * 2 + 1] = md.uvs[i * 2 + 1] / texH;
 		}
 
-		m.colors = (unsigned char*)MemAlloc(sizeof(unsigned char) * 4 * m.vertexCount);
-		std::memcpy(m.colors, md.colors.data(), sizeof(unsigned char) * 4 * m.vertexCount);
+		m.colors = (unsigned char*)MemAlloc(sizeof(unsigned char) * 4 * vc);
+		std::memcpy(m.colors, md.colors.data(), sizeof(unsigned char) * 4 * vc);
 
-		m.indices = (unsigned short*)MemAlloc(sizeof(unsigned short) * md.indices.size());
-		std::memcpy(m.indices, md.indices.data(), sizeof(unsigned short) * md.indices.size());
+		m.indices = (unsigned short*)MemAlloc(sizeof(unsigned short) * ic);
+		std::memcpy(m.indices, md.indices.data(), sizeof(unsigned short) * ic);
 
 		return m;
 	}
