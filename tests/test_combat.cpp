@@ -30,6 +30,20 @@ namespace
 		e.health = hp;
 		return e;
 	}
+	PlayerTarget targetAt(Vector3 pos, float* hp = nullptr, bool shield = false, float yaw = 0.0f)
+	{
+		PlayerTarget p;
+		p.pos = pos;
+		p.yaw = yaw;
+		p.shieldRaised = shield;
+		p.health = hp;
+		return p;
+	}
+	void step(std::vector<Enemy>& es, PlayerTarget& p, const EnemyTuning& t, int frames)
+	{
+		for (int i = 0; i < frames; ++i)
+			updateEnemies(es, p, t, 1.0f / 60.0f);
+	}
 } // namespace
 
 TEST_CASE("melee hits an enemy in front, within reach and arc")
@@ -108,20 +122,76 @@ TEST_CASE("enemy approaches; stagger and death timers expire")
 {
 	EnemyTuning t;
 	std::vector<Enemy> es{enemyAt(0, -10.0f)};
-	for (int i = 0; i < 60; ++i)
-		updateEnemies(es, Vector3{0, 0, 0}, t, 1.0f / 60.0f);
+	PlayerTarget p = targetAt({0, 0, 0});
+	step(es, p, t, 60);
 	CHECK(std::fabs(es[0].position.z) < 10.0f); // moved closer
 
 	es[0].state = EnemyState::Stagger;
 	es[0].stateTimer = 0.1f;
-	for (int i = 0; i < 12; ++i)
-		updateEnemies(es, Vector3{0, 0, 0}, t, 1.0f / 60.0f);
+	step(es, p, t, 12);
 	CHECK(es[0].state == EnemyState::Approach);
 
 	es[0].state = EnemyState::Dead;
 	es[0].stateTimer = 0.05f;
 	es[0].active = true;
-	for (int i = 0; i < 12; ++i)
-		updateEnemies(es, Vector3{0, 0, 0}, t, 1.0f / 60.0f);
+	step(es, p, t, 12);
 	CHECK_FALSE(es[0].active);
+}
+
+TEST_CASE("enemy in range winds up then strikes the player")
+{
+	EnemyTuning t;
+	std::vector<Enemy> es{enemyAt(0, -1.0f)}; // inside attackRange
+	float hp = 100.0f;
+	PlayerTarget p = targetAt({0, 0, 0}, &hp);
+	updateEnemies(es, p, t, 1.0f / 60.0f);
+	CHECK(es[0].state == EnemyState::Windup); // committed
+	CHECK(hp == doctest::Approx(100.0));      // no damage yet during telegraph
+	step(es, p, t, (int)(t.attackWindup * 60.0f) + 2);
+	CHECK(hp == doctest::Approx(100.0f - t.attackDamage));
+	CHECK(es[0].state == EnemyState::Recover);
+}
+
+TEST_CASE("stepping out of reach during the windup dodges the hit")
+{
+	EnemyTuning t;
+	std::vector<Enemy> es{enemyAt(0, -1.0f)};
+	float hp = 100.0f;
+	PlayerTarget p = targetAt({0, 0, 0}, &hp);
+	updateEnemies(es, p, t, 1.0f / 60.0f); // -> Windup
+	p.pos = {0, 0, 10.0f};                 // back away past attackReach before it lands
+	step(es, p, t, (int)(t.attackWindup * 60.0f) + 2);
+	CHECK(hp == doctest::Approx(100.0)); // whiffed
+}
+
+TEST_CASE("a facing shield absorbs most of a strike; a flank hit lands full")
+{
+	EnemyTuning t;
+	{
+		float hp = 100.0f;
+		PlayerTarget p = targetAt({0, 0, 0}, &hp, true, 0.0f); // facing -Z, toward the enemy
+		std::vector<Enemy> es{enemyAt(0, -1.0f)};
+		step(es, p, t, (int)(t.attackWindup * 60.0f) + 3);
+		CHECK(hp == doctest::Approx(100.0f - t.attackDamage * (1.0f - t.blockReduction)));
+	}
+	{
+		float hp = 100.0f;
+		PlayerTarget p = targetAt({0, 0, 0}, &hp, true, 0.0f); // shield up but enemy is behind (+Z)
+		std::vector<Enemy> es{enemyAt(0, 1.0f)};
+		step(es, p, t, (int)(t.attackWindup * 60.0f) + 3);
+		CHECK(hp == doctest::Approx(100.0f - t.attackDamage)); // flank/back: unblocked
+	}
+}
+
+TEST_CASE("a kick during the windup interrupts the strike")
+{
+	EnemyTuning t;
+	std::vector<Enemy> es{enemyAt(0, -1.0f)};
+	float hp = 100.0f;
+	PlayerTarget p = targetAt({0, 0, 0}, &hp);
+	updateEnemies(es, p, t, 1.0f / 60.0f); // -> Windup
+	tryKick(p.pos, p.yaw, es, 1.6f, 14.0f, t);
+	CHECK(es[0].state == EnemyState::Stagger);
+	step(es, p, t, (int)(t.attackWindup * 60.0f) + 3);
+	CHECK(hp == doctest::Approx(100.0)); // interrupted -> never struck
 }

@@ -4,7 +4,26 @@
 
 namespace adventure
 {
-	void updateEnemies(std::vector<Enemy>& enemies, Vector3 playerPos, const EnemyTuning& t, float dt)
+	// Apply one enemy strike to the player: a facing raised shield absorbs most of it; flank/back hits land full.
+	static void strikePlayer(const Enemy& e, PlayerTarget& player, const EnemyTuning& t)
+	{
+		if (!player.health)
+			return;
+		float dmg = t.attackDamage;
+		const float dx = e.position.x - player.pos.x;
+		const float dz = e.position.z - player.pos.z;
+		const float d = std::sqrt(dx * dx + dz * dz);
+		if (player.shieldRaised && d > 0.0001f)
+		{
+			const float pfx = std::sin(player.yaw);
+			const float pfz = -std::cos(player.yaw);
+			if ((pfx * dx + pfz * dz) / d >= std::cos(t.blockArc)) // enemy inside the shield's front cone
+				dmg *= (1.0f - t.blockReduction);
+		}
+		*player.health -= dmg;
+	}
+
+	void updateEnemies(std::vector<Enemy>& enemies, PlayerTarget& player, const EnemyTuning& t, float dt)
 	{
 		for (Enemy& e : enemies)
 		{
@@ -18,21 +37,41 @@ namespace adventure
 			e.velocity.x *= damp;
 			e.velocity.z *= damp;
 
+			const float tx = player.pos.x - e.position.x;
+			const float tz = player.pos.z - e.position.z;
+			const float d = std::sqrt(tx * tx + tz * tz);
+			if (e.state != EnemyState::Dead && d > 0.0001f)
+				e.yaw = std::atan2(tx / d, -tz / d); // face the player (yaw 0 => -Z)
+
 			switch (e.state)
 			{
 			case EnemyState::Approach:
-			{
-				float tx = playerPos.x - e.position.x;
-				float tz = playerPos.z - e.position.z;
-				float d = std::sqrt(tx * tx + tz * tz);
-				if (d > t.attackRange && d > 0.0001f)
+				if (d <= t.attackRange)
+				{
+					e.state = EnemyState::Windup; // in range: commit to a swing
+					e.stateTimer = t.attackWindup;
+				}
+				else if (d > 0.0001f)
 				{
 					e.position.x += (tx / d) * t.moveSpeed * dt;
 					e.position.z += (tz / d) * t.moveSpeed * dt;
-					e.yaw = std::atan2(tx / d, -tz / d); // face the player (yaw 0 => -Z)
 				}
 				break;
-			}
+			case EnemyState::Windup:
+				e.stateTimer -= dt;
+				if (e.stateTimer <= 0.0f)
+				{
+					if (d <= t.attackReach) // player still in range at the strike moment -> it lands
+						strikePlayer(e, player, t);
+					e.state = EnemyState::Recover;
+					e.stateTimer = t.attackRecover;
+				}
+				break;
+			case EnemyState::Recover:
+				e.stateTimer -= dt;
+				if (e.stateTimer <= 0.0f)
+					e.state = EnemyState::Approach;
+				break;
 			case EnemyState::Stagger:
 				e.stateTimer -= dt;
 				if (e.stateTimer <= 0.0f)

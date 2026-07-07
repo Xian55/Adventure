@@ -5,8 +5,8 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
 | File | Responsibility |
 |------|----------------|
 | `Melee.{h,cpp}` | Dark Messiah–style directional melee: **hold to wind up (Charge), release to strike**. `beginCharge`/`setSwingDir`/`releaseSwing` + `updateMelee` (Idle→Charge→Active→Recovery→Idle). `SwingDir` from WASD (Left/Right/Forward/Overhead); **Neutral (no key) alternates Left/Right**. `chargeFraction` scales damage (hold longer = stronger). `WeaponDef` from Lua. Same charge/release pattern a **bow draw** will reuse (M5). |
-| `Enemy.h` | `Enemy` struct (pos/vel/health/`EnemyState` Approach/Stagger/Dead/timer/dims) — a skeleton. Rendered as a placeholder box until sprites. |
-| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI + knockback integration + stagger/death timers), `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage/knockback/stagger/kill, one hit per swing), `tryKick` (shove enemies in a forward cone hard + stagger — environmental-kill move, cooldown caller-managed). `EnemyTuning`. |
+| `Enemy.h` | `Enemy` struct (pos/vel/health/`EnemyState` Approach/**Windup**/**Recover**/Stagger/Dead/timer/dims) — a skeleton. Rendered as a placeholder box until sprites. |
+| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI → **Windup telegraph → strike the player** (reduced by a facing shield) → Recover; knockback integration; stagger/death timers; writes `PlayerTarget.health`), `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage/knockback/stagger/kill, one hit per swing), `tryKick` (shove enemies in a forward cone hard + stagger — environmental-kill move; also interrupts a windup). `EnemyTuning` (approach/attack/block numbers), `PlayerTarget` (what an enemy needs to hit back). |
 
 ## Flow
 - Input buffers a swing (`requestSwing`, on attack press). `updateMelee` runs each **fixed step** (in
@@ -19,7 +19,16 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
 - Keep the state machine pure/tested (`tests/test_melee.cpp`) — feel is tuned in Lua, not code.
 - Execution (hitbox geometry, damage application) is C++; policy/numbers are Lua.
 
-## Coming (M2b/M2c)
-Hit resolution (Active hitbox vs enemy hurtbox → damage/knockback/stagger), skeleton `EnemyAI`
-(approach/attack/stagger/die), kick (forward impulse) + shield (facing-based block). Player moves into the
-ECS as components at that point.
+## Shield & the hit-back loop (M2c)
+- Enemies **strike back**: Approach → **Windup** (committed telegraph, immobile — dodge or kick to cancel) →
+  strike (damage if the player is still within `attackReach`) → **Recover** → Approach.
+- **Shield** = hold RMB. A raised shield facing the attacker (enemy inside the `blockArc` front cone)
+  absorbs `blockReduction` of the hit; flank/back hits land full. State lives in `main`; passed in via
+  `PlayerTarget.shieldRaised` (kept out of the pure logic's own state — it's per-frame input).
+- Player **health** on `Player`; `updateEnemies` writes it through `PlayerTarget.health*`. Death (≤0) →
+  `main` respawns via `loadMap` (resets map, enemies, health). HUD draws a health bar + BLOCK indicator.
+- Enemy attack numbers are Lua-tunable (`tuning.enemy*`, `tuning.block*`), hot-reloaded with F5.
+
+## Coming
+Rage → berserk meter (repeated hits build rage; maxed = temporary berserk — DM resource). Swap enemy boxes
+→ billboard sprites (`RenderKind` seam). Player + enemies move into the ECS as components.

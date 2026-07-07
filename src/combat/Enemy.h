@@ -6,6 +6,8 @@ namespace adventure
 	enum class EnemyState
 	{
 		Approach,
+		Windup,  // committed telegraph before a strike (immobile; interruptible by stagger)
+		Recover, // brief cooldown after swinging
 		Stagger,
 		Dead
 	};

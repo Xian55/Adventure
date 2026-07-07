@@ -21,18 +21,23 @@ Weapon families (each with pros/cons, tuned in Lua):
 A short, cooldown-gated forward impulse. Casts a short AABB/sphere (~1.6 u) along camera-forward; on hit,
 applies a large horizontal knockback to the enemy's velocity, integrated by the same physics as everything
 else — so kicking an enemy into a `trigger_hurt` brush or off a ledge is an *emergent* environmental kill,
-not a scripted special case. Reach/impulse live in `scripts/weapons/kick.lua`.
+not a scripted special case. Reach/impulse live in `tuning.lua` (`kickReach`/`kickImpulse`). A kick also
+**interrupts** an enemy mid-windup (it staggers), cancelling the pending strike. *(Implemented — key F.)*
 
 ## Shield / block
-Facing-based. While raised, incoming damage is reduced **iff** the attack direction is within the shield's
-`blockArc` of the player's facing (`dot(forward, -attackDir) > cos(arc/2)`). Flank/back hits ignore the
-shield. A tight **parry** window can stagger the attacker. Raising the shield lowers move speed. Maces and
-heavy hits can break a guard (high stagger).
+Facing-based. While raised (**hold RMB**), incoming damage is reduced by `blockReduction` **iff** the
+attacker is within the shield's `blockArc` of the player's facing (`dot(forward, dirToEnemy) > cos(arc)`).
+Flank/back hits ignore the shield. *(Implemented: damage reduction + HUD BLOCK indicator.)* **Planned:** a
+tight **parry** window that staggers the attacker, a move-speed penalty while raised, and guard-break on
+heavy/mace hits.
 
 ## Enemy behaviour (skeleton = first)
-State machine with C++ transitions, **Lua policy**: **Approach** (steer toward player) → **Attack**
-(telegraph → enable hitbox → recovery) → **Stagger** (locked while stagger timer > 0; knockback plays) →
-**Dead** (disable collision/hitbox, death sprite, despawn; Lua `OnDeath` may drop loot). *Decisions* (when
+State machine with C++ transitions, **Lua policy**: **Approach** (steer toward player) → **Windup**
+(committed telegraph, immobile — the player's dodge/kick window) → strike (damage iff still in
+`attackReach`) → **Recover** → **Stagger** (locked while stagger timer > 0; knockback plays; a hit or kick
+forces this, interrupting a windup) → **Dead** (shrink, despawn; Lua `OnDeath` may drop loot later).
+*(Implemented in `updateEnemies`; numbers in `tuning.enemy*`. Lua per-enemy policy hooks come with the ECS
+move.)* *Decisions* (when
 to attack, aggro range, cadence) are Lua `OnThink(self, dt)`; *execution* (movement integration, hitbox
 geometry, collision) is C++.
 

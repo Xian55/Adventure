@@ -9,15 +9,31 @@ namespace adventure
 {
 	struct EnemyTuning
 	{
-		float moveSpeed = 3.0f;     // approach speed
-		float attackRange = 1.6f;   // stops approaching within this
-		float staggerTime = 0.45f;  // frozen after a hit
-		float deathTime = 1.0f;     // despawn delay after dying
-		float knockbackDamp = 9.0f; // knockback velocity decay per second
+		float moveSpeed = 3.0f;      // approach speed
+		float attackRange = 1.6f;    // stops approaching / starts a swing within this
+		float attackWindup = 0.5f;   // telegraph before the hit lands (dodge/kick window)
+		float attackRecover = 0.6f;  // cooldown after swinging
+		float attackReach = 1.9f;    // hit connects if the player is within this at strike time
+		float attackDamage = 12.0f;  // damage per landed hit
+		float staggerTime = 0.45f;   // frozen after being hit
+		float deathTime = 1.0f;      // despawn delay after dying
+		float knockbackDamp = 9.0f;  // knockback velocity decay per second
+		float blockArc = 1.2f;       // front half-cone the raised shield covers (radians)
+		float blockReduction = 0.8f; // fraction of damage absorbed by a facing block
 	};
 
-	// One fixed step of AI + knockback integration for every active enemy.
-	void updateEnemies(std::vector<Enemy>& enemies, Vector3 playerPos, const EnemyTuning& t, float dt);
+	// What an enemy needs to strike the player back. `health` is written on a landed hit.
+	struct PlayerTarget
+	{
+		Vector3 pos{0, 0, 0};
+		float yaw = 0.0f; // facing; 0 => -Z
+		bool shieldRaised = false;
+		float* health = nullptr; // decremented when a hit lands (null = invulnerable)
+	};
+
+	// One fixed step of AI + knockback integration for every active enemy. Enemies approach, wind up,
+	// and strike the player (reduced/negated by a facing shield); the target's health is written through.
+	void updateEnemies(std::vector<Enemy>& enemies, PlayerTarget& player, const EnemyTuning& t, float dt);
 
 	// If the player's melee hitbox is live (and this swing hasn't hit yet), damage every enemy inside the
 	// reach + arc: apply damage, knock them back, stagger (or kill). One resolution per swing.

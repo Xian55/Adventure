@@ -51,6 +51,7 @@ int main()
 	WeaponDef weapon;
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
 	float kickReach = 1.6f, kickImpulse = 14.0f;
+	EnemyTuning enemyTune;
 	auto loadTuning = [&]() {
 		sScript->runFile("scripts/tuning.lua");
 		tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
@@ -77,6 +78,16 @@ int main()
 		weapon.chargeDamageMul = (float)sScript->evalNumber("sword.chargeDamageMul", weapon.chargeDamageMul);
 		kickReach = (float)sScript->evalNumber("tuning.kickReach", kickReach);
 		kickImpulse = (float)sScript->evalNumber("tuning.kickImpulse", kickImpulse);
+
+		enemyTune.blockArc = (float)sScript->evalNumber("tuning.blockArc", enemyTune.blockArc);
+		enemyTune.blockReduction = (float)sScript->evalNumber("tuning.blockReduction", enemyTune.blockReduction);
+		enemyTune.moveSpeed = (float)sScript->evalNumber("tuning.enemyMoveSpeed", enemyTune.moveSpeed);
+		enemyTune.attackRange = (float)sScript->evalNumber("tuning.enemyAttackRange", enemyTune.attackRange);
+		enemyTune.attackWindup = (float)sScript->evalNumber("tuning.enemyAttackWindup", enemyTune.attackWindup);
+		enemyTune.attackRecover = (float)sScript->evalNumber("tuning.enemyAttackRecover", enemyTune.attackRecover);
+		enemyTune.attackReach = (float)sScript->evalNumber("tuning.enemyAttackReach", enemyTune.attackReach);
+		enemyTune.attackDamage = (float)sScript->evalNumber("tuning.enemyAttackDamage", enemyTune.attackDamage);
+		enemyTune.staggerTime = (float)sScript->evalNumber("tuning.enemyStaggerTime", enemyTune.staggerTime);
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -87,7 +98,6 @@ int main()
 	world::WorldGeometry geo;
 	Player player;
 	std::vector<Enemy> enemies;
-	EnemyTuning enemyTune;
 	auto loadMap = [&](const char* path) {
 		char* txt = LoadFileText(path);
 		world::MapParseResult r = world::parseMap(txt ? txt : "");
@@ -104,6 +114,7 @@ int main()
 			player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
 		}
 		player.velocity = Vector3{0, 0, 0};
+		player.health = player.maxHealth; // fresh spawn / respawn
 
 		// Spawn skeletons from monster_skeleton entities; if the map has none, drop a few in front so the
 		// combat slice always has targets.
@@ -242,10 +253,21 @@ int main()
 				}
 				updateMelee(melee, weapon, config::kFixedDt);
 				resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune);
-				updateEnemies(enemies, player.position, enemyTune, config::kFixedDt);
+				PlayerTarget tgt;
+				tgt.pos = player.position;
+				tgt.yaw = player.yaw;
+				tgt.shieldRaised = IsMouseButtonDown(MOUSE_BUTTON_RIGHT); // hold RMB to block
+				tgt.health = &player.health;
+				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
 				if (kickCooldown > 0.0f)
 					kickCooldown -= config::kFixedDt;
 				accumulator -= config::kFixedDt;
+				if (player.health <= 0.0f) // died -> respawn (resets map, enemies, health)
+				{
+					loadMap(mapPath);
+					accumulator = 0.0f;
+					break;
+				}
 			}
 		}
 
@@ -275,6 +297,7 @@ int main()
 					continue;
 				Color c = e.state == EnemyState::Dead      ? Color{95, 75, 72, 255}
 				          : e.state == EnemyState::Stagger ? Color{225, 120, 110, 255}
+				          : e.state == EnemyState::Windup  ? Color{245, 205, 90, 255} // telegraph: about to strike
 				                                           : Color{205, 200, 185, 255};
 				float bh = e.state == EnemyState::Dead ? e.height * 0.35f : e.height;
 				Vector3 box = {e.position.x, e.position.y - (e.height - bh) * 0.5f, e.position.z};
@@ -288,6 +311,16 @@ int main()
 				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon));
 			}
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
+			// Health bar (bottom-left of the low-res frame) + block indicator.
+			{
+				const int rh = renderer.lowH();
+				const float hp = player.maxHealth > 0.01f ? fmaxf(0.0f, player.health) / player.maxHealth : 0.0f;
+				const int bx = 8, bw = 120, bh2 = 8, by = rh - 16;
+				DrawRectangle(bx - 1, by - 1, bw + 2, bh2 + 2, Color{20, 15, 15, 220});
+				DrawRectangle(bx, by, (int)(bw * hp), bh2, Color{170, 50, 45, 255});
+				if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+					DrawText("BLOCK", bx, by - 12, 10, Color{150, 190, 230, 255});
+			}
 			renderer.endScene();
 		}
 
