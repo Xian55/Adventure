@@ -48,11 +48,9 @@ trees/nodes/costs/effects and weapon defs live in **Lua**; C++ holds earned/spen
 - **Charge/release is a shared pattern**: the melee wind-up-and-release (`combat/Melee`) is the same shape a
   **bow draw** uses (hold to draw, release to fire) — reuse it for ranged at M5 rather than re-inventing.
 
-## Configurable keybindings (→ input rebinding)
-Let the player set their own keybindings. Needs an input **action** layer (named actions: MoveForward, Jump,
-Attack, Kick, Block, Use, …) mapped to keys/mouse buttons, replacing the hard-coded `IsKeyDown(KEY_W)` etc.
-in `main`. A rebind UI + persisted config (Lua/JSON). Do the action-map indirection first (small refactor),
-then the settings screen. Mouse sensitivity / invert-Y belong here too.
+## Configurable keybindings — **done (M3d)**
+Shipped as `src/input` (action-map + `keybindings.cfg`, no hard-coded gameplay keys). Remaining nice-to-haves:
+mouse sensitivity / invert-Y as bindable settings, an in-game rebind screen, controller support.
 
 ## Notes
 - These reinforce the existing plan (M3 inventory, M4 stats, M5 spells) rather than adding new pillars.

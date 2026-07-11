@@ -8,6 +8,8 @@
 #include "combat/Destructible.h"
 #include "combat/Melee.h"
 #include "combat/Rage.h"
+#include "input/InputMap.h"
+#include "input/InputQuery.h"
 #include "items/Collide.h"
 #include "items/Container.h"
 #include "items/Inventory.h"
@@ -55,6 +57,25 @@ int main()
 
 	Metrics& metrics = Metrics::instance();
 	const Color fog = Color{26, 28, 40, 255};
+
+	// Keybindings: load keybindings.cfg (next to the exe) if present, else write the default template to edit.
+	InputMap keys;
+	{
+		const char* kCfg = "keybindings.cfg";
+		if (FileExists(kCfg))
+		{
+			char* t = LoadFileText(kCfg);
+			keys = loadBindings(t ? t : "");
+			if (t)
+				UnloadFileText(t);
+		}
+		else
+		{
+			keys = defaultBindings();
+			std::string txt = saveBindings(keys);
+			SaveFileText(kCfg, txt.data());
+		}
+	}
 
 	sScript->init();
 	sScript->selfTest();
@@ -345,25 +366,25 @@ int main()
 		if (IsKeyPressed(KEY_B)) // toggle enemy render kind (debug the seam)
 			for (Enemy& e : enemies)
 				e.render = e.render == RenderKind::Billboard ? RenderKind::Box : RenderKind::Billboard;
-		// Attack: hold LMB to wind up, the held movement key picks the direction, release to strike.
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+		// Attack: hold to wind up, the held movement key picks the direction, release to strike (rebindable).
+		if (actionPressed(keys, Action::Attack))
 			beginCharge(melee);
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+		if (actionDown(keys, Action::Attack))
 		{
 			SwingDir d = SwingDir::Neutral;
-			if (IsKeyDown(KEY_A))
+			if (actionDown(keys, Action::MoveLeft))
 				d = SwingDir::Left;
-			else if (IsKeyDown(KEY_D))
+			else if (actionDown(keys, Action::MoveRight))
 				d = SwingDir::Right;
-			else if (IsKeyDown(KEY_W))
+			else if (actionDown(keys, Action::MoveForward))
 				d = SwingDir::Forward;
-			else if (IsKeyDown(KEY_S))
+			else if (actionDown(keys, Action::MoveBack))
 				d = SwingDir::Overhead;
 			setSwingDir(melee, d);
 		}
-		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+		if (actionReleased(keys, Action::Attack))
 			releaseSwing(melee);
-		if (IsKeyPressed(KEY_F) && kickCooldown <= 0.0f) // kick: knock enemies back
+		if (actionPressed(keys, Action::Kick) && kickCooldown <= 0.0f) // kick: knock enemies back
 		{
 			tryKick(player.position, player.yaw, enemies, kickReach, kickImpulse, enemyTune);
 			{
@@ -378,7 +399,7 @@ int main()
 		const int leverTarget = nearestLever(levers, player.position, player.yaw, 2.2f);
 		const int doorTarget = nearestDoor(doors, player.position, player.yaw, 2.2f);
 		const int chestTarget = nearestContainer(containers, player.position, player.yaw, 2.2f);
-		if (IsKeyPressed(KEY_E))
+		if (actionPressed(keys, Action::Interact))
 		{
 			if (leverTarget >= 0)
 				levers[leverTarget].on = !levers[leverTarget].on;
@@ -412,11 +433,11 @@ int main()
 		{
 			Metrics::Scope s(metrics, "update");
 			MoveInput in;
-			in.forward = (IsKeyDown(KEY_W) ? 1.0f : 0.0f) - (IsKeyDown(KEY_S) ? 1.0f : 0.0f);
-			in.right = (IsKeyDown(KEY_D) ? 1.0f : 0.0f) - (IsKeyDown(KEY_A) ? 1.0f : 0.0f);
-			in.jump = IsKeyDown(KEY_SPACE);
-			in.crouch = IsKeyDown(KEY_LEFT_CONTROL);
-			in.sprint = IsKeyDown(KEY_LEFT_SHIFT);
+			in.forward = (actionDown(keys, Action::MoveForward) ? 1.0f : 0.0f) - (actionDown(keys, Action::MoveBack) ? 1.0f : 0.0f);
+			in.right = (actionDown(keys, Action::MoveRight) ? 1.0f : 0.0f) - (actionDown(keys, Action::MoveLeft) ? 1.0f : 0.0f);
+			in.jump = actionDown(keys, Action::Jump);
+			in.crouch = actionDown(keys, Action::Crouch);
+			in.sprint = actionDown(keys, Action::Sprint);
 			accumulator += GetFrameTime();
 			while (accumulator >= config::kFixedDt)
 			{
@@ -454,7 +475,7 @@ int main()
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
-				tgt.shieldRaised = IsMouseButtonDown(MOUSE_BUTTON_RIGHT); // hold RMB to block
+				tgt.shieldRaised = actionDown(keys, Action::Block); // hold to block (rebindable)
 				tgt.health = &player.health;
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
 				for (Enemy& e : enemies) // props block enemies too (corner them behind a barrel)
@@ -576,7 +597,7 @@ int main()
 			DrawRectangle(hx - 2, hy - 2, hw + 4, hh + 4, Color{20, 15, 15, 220});
 			DrawRectangle(hx, hy, (int)(hw * hpFrac), hh, Color{175, 50, 45, 255});
 			DrawText(TextFormat("%d / %d", (int)fmaxf(0.0f, player.health), (int)player.maxHealth), hx + hw + 10, hy, 20, RAYWHITE);
-			if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+			if (actionDown(keys, Action::Block))
 				DrawText("BLOCK", hx + hw + 120, hy, 20, Color{150, 190, 230, 255});
 			const int ry = hy - 22;
 			const float rf = rageFraction(rage, rageTune);

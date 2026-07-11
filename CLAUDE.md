@@ -10,8 +10,9 @@ enemy sprites, `trigger_hurt` lava hazards (kick enemies in), destructible props
 smash + drop loot) (`src/combat` + `render/`), and **M3a/b: items/inventory/pickups + HUD + chests**
 (`src/items`: coins/keys/potions in a stacking bag; consumables auto-heal; native-res HUD; **chests** — E to
 open, locked ones need a key; props/chests solid + standable), and **mechanisms** (`src/mech`: sliding
-**doors** wired by `target`/`targetname` — opened by **levers**, **pressure plates**, or a **key**). **Next in
-M3**: Lua item defs, equip/hotbar, configurable keybindings. Real sprite art still deferred. Controls: WASD + mouse-look, Shift sprint, Space
+**doors** wired by `target`/`targetname` — opened by **levers**, **pressure plates**, or a **key**). **M3d: rebindable input**
+(`src/input`: named actions → keys/mouse, `keybindings.cfg`, no hard-coded gameplay keys). **Next in M3**:
+Lua item defs, equip/hotbar. Real sprite art still deferred. Controls: WASD + mouse-look, Shift sprint, Space
 jump, Ctrl crouch, **hold Left-click to wind up + WASD to aim (A/D slash, W thrust, S overhead) + release to
 strike**, F kick (knockback), **hold Right-click to block**, **E open/unlock chest**. Dev tools: F3 metrics,
 F4 telemetry (jump/dims/pos), **V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**, **B toggle
@@ -35,7 +36,7 @@ setup).
 
 ## Layout
 `src/` game code (built into `adventure_lib`; thin `src/main.cpp`) — subsystems `core/ render/ lua/ world/
-player/ combat/ items/ mech/` · `tests/` doctest · `bench/` perf gate · `scripts/` Lua · `maps/` `.map` levels (`tools/gen_room.py`
+player/ combat/ items/ mech/ input/` · `tests/` doctest · `bench/` perf gate · `scripts/` Lua · `maps/` `.map` levels (`tools/gen_room.py`
 emits them) · `assets/` local PNGs (gitignored) · `deps/` vendored minilua + LuaBridge · `docs/design/` the
 design docs (+ `BACKLOG.md`). Each `src/<subsystem>/` has its own `CLAUDE.md`.
 
