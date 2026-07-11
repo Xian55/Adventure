@@ -8,7 +8,7 @@
 
 namespace adventure
 {
-	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress, int swingDir, float charge, float kick)
+	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress, int swingDir, float charge, float kick, int weapon)
 	{
 		Camera3D vcam{};
 		vcam.position = Vector3{0, 0, 0};
@@ -105,14 +105,34 @@ namespace adventure
 			DrawCube(Vector3{0, 0.0f, 0.0f}, 0.14f, 0.16f, 0.13f, skin); // fist
 			DrawCubeWires(Vector3{0, 0.0f, 0.0f}, 0.14f, 0.16f, 0.13f, skinDk);
 			DrawCube(Vector3{0, 0.11f, 0}, 0.045f, 0.07f, 0.05f, Color{160, 130, 75, 255}); // grip collar
-			DrawCube(Vector3{0, 0.17f, 0}, 0.19f, 0.04f, 0.055f, Color{150, 120, 70, 255}); // crossguard (slimmer, not a racket head)
 			const Color steel = Color{182, 196, 188, 255};
 			const Color steelDk = Color{92, 108, 102, 255};
-			DrawCube(Vector3{0, 0.62f, 0}, 0.055f, 0.86f, 0.016f, steel); // blade body (thin edge-on)
-			DrawCubeWires(Vector3{0, 0.62f, 0}, 0.055f, 0.86f, 0.016f, steelDk);
-			DrawCube(Vector3{0, 0.62f, 0}, 0.012f, 0.86f, 0.02f, Color{150, 165, 158, 255});    // fuller (center ridge)
-			DrawCylinderEx(Vector3{0, 1.05f, 0}, Vector3{0, 1.24f, 0}, 0.030f, 0.0f, 4, steel); // tapered point -> reads as a blade, not a paddle
-			DrawCylinderWiresEx(Vector3{0, 1.05f, 0}, Vector3{0, 1.24f, 0}, 0.030f, 0.0f, 4, steelDk);
+			if (weapon == 1) // Dagger: short stabby blade
+			{
+				DrawCube(Vector3{0, 0.16f, 0}, 0.13f, 0.035f, 0.05f, Color{150, 120, 70, 255}); // small crossguard
+				DrawCube(Vector3{0, 0.4f, 0}, 0.05f, 0.42f, 0.014f, steel);                     // short blade
+				DrawCubeWires(Vector3{0, 0.4f, 0}, 0.05f, 0.42f, 0.014f, steelDk);
+				DrawCylinderEx(Vector3{0, 0.61f, 0}, Vector3{0, 0.74f, 0}, 0.026f, 0.0f, 4, steel); // point
+			}
+			else if (weapon == 2) // Mace: wooden haft + a spiked metal head
+			{
+				const Color head = Color{120, 122, 132, 255};
+				DrawCube(Vector3{0, 0.34f, 0}, 0.06f, 0.55f, 0.06f, Color{78, 60, 42, 255}); // haft
+				DrawCube(Vector3{0, 0.66f, 0}, 0.2f, 0.2f, 0.2f, head);                      // head
+				DrawCubeWires(Vector3{0, 0.66f, 0}, 0.2f, 0.2f, 0.2f, Color{60, 62, 72, 255});
+				DrawCube(Vector3{0, 0.8f, 0}, 0.05f, 0.09f, 0.05f, Color{160, 162, 172, 255});      // top spike
+				DrawCube(Vector3{0.14f, 0.66f, 0}, 0.09f, 0.05f, 0.05f, Color{160, 162, 172, 255}); // side spikes
+				DrawCube(Vector3{-0.14f, 0.66f, 0}, 0.09f, 0.05f, 0.05f, Color{160, 162, 172, 255});
+			}
+			else // Sword (default): crossguard + tapered blade
+			{
+				DrawCube(Vector3{0, 0.17f, 0}, 0.19f, 0.04f, 0.055f, Color{150, 120, 70, 255}); // crossguard
+				DrawCube(Vector3{0, 0.62f, 0}, 0.055f, 0.86f, 0.016f, steel);                   // blade body
+				DrawCubeWires(Vector3{0, 0.62f, 0}, 0.055f, 0.86f, 0.016f, steelDk);
+				DrawCube(Vector3{0, 0.62f, 0}, 0.012f, 0.86f, 0.02f, Color{150, 165, 158, 255});    // fuller
+				DrawCylinderEx(Vector3{0, 1.05f, 0}, Vector3{0, 1.24f, 0}, 0.030f, 0.0f, 4, steel); // point
+				DrawCylinderWiresEx(Vector3{0, 1.05f, 0}, Vector3{0, 1.24f, 0}, 0.030f, 0.0f, 4, steelDk);
+			}
 			rlPopMatrix();
 		}
 

@@ -591,7 +591,8 @@ int main()
 			if (!noclip)
 			{
 				int vmDir = (melee.phase == MeleePhase::Charge) ? (int)melee.dir : (int)melee.resolved;
-				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon), kickAnim > 0.0f ? kickAnim / kickAnimTime : 0.0f);
+				const int weaponModel = equippedItem == kItemDagger ? 1 : (equippedItem == kItemMace ? 2 : 0);
+				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon), kickAnim > 0.0f ? kickAnim / kickAnimTime : 0.0f, weaponModel);
 			}
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			renderer.endScene();
