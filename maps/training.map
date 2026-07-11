@@ -123,3 +123,16 @@
 "origin" "0 0 48"
 "angle" "90"
 }
+// trigger_hurt: a lava slab across the approach lane (enemies wade through it; kick them in). dmg = per second.
+{
+"classname" "trigger_hurt"
+"dmg" "45"
+{
+( -192 48 -16 ) ( -192 128 -16 ) ( -192 48 42 ) trigger [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 192 48 -16 ) ( 192 48 42 ) ( 192 128 -16 ) trigger [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -192 48 -16 ) ( -192 48 42 ) ( 192 48 -16 ) trigger [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -192 128 -16 ) ( 192 128 -16 ) ( -192 128 42 ) trigger [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -192 48 -16 ) ( 192 48 -16 ) ( -192 128 -16 ) trigger [ 1 0 0 0 ] [ 0 1 0 0 ] 0 1 1
+( -192 48 42 ) ( -192 128 42 ) ( 192 48 42 ) trigger [ 1 0 0 0 ] [ 0 1 0 0 ] 0 1 1
+}
+}

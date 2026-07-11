@@ -100,6 +100,7 @@ add_executable(adventure_tests
     tests/test_combat.cpp
     tests/test_rage.cpp
     tests/test_billboard.cpp
+    tests/test_hazard.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

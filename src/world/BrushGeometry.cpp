@@ -178,15 +178,98 @@ namespace adventure::world
 			if (anyVerts && !cb.planes.empty())
 				world.collision.push_back(std::move(cb));
 		}
+
+		bool isTrigger(const std::string& classname)
+		{
+			return classname.rfind("trigger", 0) == 0; // trigger_hurt, trigger_multiple, ... = sensors, not solid
+		}
+
+		// Engine-space AABB of a brush's convex volume (via the same plane-clipping as buildBrush).
+		bool brushAABBEngine(const Brush& brush, Vector3& outMin, Vector3& outMax)
+		{
+			const int nf = (int)brush.faces.size();
+			if (nf < 4)
+				return false;
+
+			Vector3 interior = {0, 0, 0};
+			for (const auto& f : brush.faces)
+				for (int k = 0; k < 3; ++k)
+					interior = Vector3Add(interior, f.p[k]);
+			interior = Vector3Scale(interior, 1.0f / (nf * 3));
+
+			std::vector<Vector4> planes(nf);
+			for (int i = 0; i < nf; ++i)
+			{
+				Vector4 pl = planeFromPoints(brush.faces[i].p[0], brush.faces[i].p[1], brush.faces[i].p[2]);
+				if (planeDist(pl, interior) > 0.0f)
+					pl = Vector4{-pl.x, -pl.y, -pl.z, -pl.w};
+				planes[i] = pl;
+			}
+
+			outMin = Vector3{1e30f, 1e30f, 1e30f};
+			outMax = Vector3{-1e30f, -1e30f, -1e30f};
+			bool any = false;
+			for (int i = 0; i < nf; ++i)
+			{
+				std::vector<Vector3> poly = seedPolygon(planes[i]);
+				for (int j = 0; j < nf && poly.size() >= 3; ++j)
+					if (j != i)
+						poly = clip(poly, planes[j]);
+				for (const Vector3& mp : poly)
+				{
+					Vector3 ep = toEngine(mp);
+					outMin = Vector3Min(outMin, ep);
+					outMax = Vector3Max(outMax, ep);
+					any = true;
+				}
+			}
+			return any;
+		}
 	} // namespace
 
 	WorldGeometry buildWorld(const MapData& map)
 	{
 		WorldGeometry world;
 		for (const auto& e : map.entities)
+		{
+			if (isTrigger(e.classname)) // sensors aren't solid geometry
+				continue;
 			for (const auto& b : e.brushes)
 				buildBrush(b, world);
+		}
 		return world;
+	}
+
+	std::vector<Hazard> buildHazards(const MapData& map)
+	{
+		std::vector<Hazard> hazards;
+		for (const auto& e : map.entities)
+		{
+			if (e.classname != "trigger_hurt")
+				continue;
+			const float dmg = e.number("dmg", 30.0f);
+			for (const auto& b : e.brushes)
+			{
+				Vector3 mn, mx;
+				if (brushAABBEngine(b, mn, mx))
+					hazards.push_back(Hazard{mn, mx, dmg});
+			}
+		}
+		return hazards;
+	}
+
+	bool hazardContains(const Hazard& h, Vector3 p)
+	{
+		return p.x >= h.min.x && p.x <= h.max.x && p.y >= h.min.y && p.y <= h.max.y && p.z >= h.min.z && p.z <= h.max.z;
+	}
+
+	float hazardDamageAt(const std::vector<Hazard>& hazards, Vector3 p)
+	{
+		float dps = 0.0f;
+		for (const Hazard& h : hazards)
+			if (hazardContains(h, p))
+				dps += h.damagePerSec;
+		return dps;
 	}
 
 	Vector3 mapToEngine(Vector3 mapPoint)

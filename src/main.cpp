@@ -112,6 +112,7 @@ int main()
 	WorldRenderer world;
 	world::CollisionWorld collision;
 	world::WorldGeometry geo;
+	std::vector<world::Hazard> hazards;
 	Player player;
 	std::vector<Enemy> enemies;
 	auto loadMap = [&](const char* path) {
@@ -124,6 +125,7 @@ int main()
 		world.load(geo);
 		world.setFog(fog, 0.10f);
 		collision.build(geo);
+		hazards = world::buildHazards(r.data);
 		if (const world::Entity* sp = r.data.first("info_player_start"))
 		{
 			player.position = world::mapToEngine(sp->vec3("origin"));
@@ -294,6 +296,11 @@ int main()
 				tgt.health = &player.health;
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
+				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
+				{
+					const Vector3 pf = {player.position.x, player.position.y - tune.height * 0.5f, player.position.z};
+					player.health -= world::hazardDamageAt(hazards, pf) * config::kFixedDt; // stand in it, take damage
+				}
 				if (kickCooldown > 0.0f)
 					kickCooldown -= config::kFixedDt;
 				accumulator -= config::kFixedDt;
@@ -326,6 +333,12 @@ int main()
 			renderer.beginScene(fog);
 			BeginMode3D(cam);
 			world.draw(cam.position);
+			for (const world::Hazard& h : hazards) // damage volumes: lava surface + a wire outline
+			{
+				const Vector3 hc = {(h.min.x + h.max.x) * 0.5f, h.min.y + 0.05f, (h.min.z + h.max.z) * 0.5f};
+				DrawPlane(hc, Vector2{h.max.x - h.min.x, h.max.z - h.min.z}, Color{205, 45, 30, 130});
+				DrawCubeWires(Vector3{hc.x, (h.min.y + h.max.y) * 0.5f, hc.z}, h.max.x - h.min.x, h.max.y - h.min.y, h.max.z - h.min.z, Color{255, 95, 55, 160});
+			}
 			for (const Enemy& e : enemies)
 			{
 				if (!e.active || e.render != RenderKind::Box) // billboards handled below

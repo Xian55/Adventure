@@ -69,6 +69,14 @@ namespace adventure::world
 		std::vector<CollisionBrush> collision; // one per solid brush
 	};
 
+	// A damage sensor volume (from a trigger_hurt entity), engine-space AABB. Not solid, not rendered.
+	struct Hazard
+	{
+		Vector3 min;
+		Vector3 max;
+		float damagePerSec = 30.0f;
+	};
+
 	// Map space (Z-up) -> engine space (Y-up) with map scale. For placing entities read from a map.
 	Vector3 mapToEngine(Vector3 mapPoint);
 } // namespace adventure::world

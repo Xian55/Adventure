@@ -1,6 +1,7 @@
 #pragma once
 #include "combat/Enemy.h"
 #include "combat/Melee.h"
+#include "world/MapTypes.h"
 
 #include <vector>
 
@@ -49,4 +50,7 @@ namespace adventure
 	// Kick: shove every enemy in a short forward cone hard (impulse velocity) and stagger them — the
 	// Dark Messiah environmental-kill move (knock into hazards/off ledges). Cooldown is caller-managed.
 	void tryKick(Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, float reach, float impulse, const EnemyTuning& t);
+
+	// Damage every enemy standing in a hazard volume (kick them in for an environmental kill). dt-scaled.
+	void applyHazards(std::vector<Enemy>& enemies, const std::vector<world::Hazard>& hazards, const EnemyTuning& t, float dt);
 } // namespace adventure

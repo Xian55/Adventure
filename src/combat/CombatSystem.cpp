@@ -1,4 +1,5 @@
 #include "combat/CombatSystem.h"
+#include "world/BrushGeometry.h"
 
 #include <cmath>
 
@@ -163,6 +164,27 @@ namespace adventure
 			e.velocity.z += fz * impulse;
 			e.state = EnemyState::Stagger;
 			e.stateTimer = t.staggerTime;
+		}
+	}
+
+	void applyHazards(std::vector<Enemy>& enemies, const std::vector<world::Hazard>& hazards, const EnemyTuning& t, float dt)
+	{
+		if (hazards.empty())
+			return;
+		for (Enemy& e : enemies)
+		{
+			if (!e.active || e.state == EnemyState::Dead)
+				continue;
+			const Vector3 feet = {e.position.x, e.position.y - e.height * 0.5f, e.position.z};
+			const float dps = world::hazardDamageAt(hazards, feet);
+			if (dps <= 0.0f)
+				continue;
+			e.health -= dps * dt;
+			if (e.health <= 0.0f)
+			{
+				e.state = EnemyState::Dead;
+				e.stateTimer = t.deathTime;
+			}
 		}
 	}
 } // namespace adventure
