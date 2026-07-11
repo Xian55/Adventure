@@ -215,7 +215,9 @@ int main()
 		levers.clear();
 		plates.clear();
 		inventory = Inventory{};           // fresh bag on (re)spawn
-		addItem(inventory, kItemSword, 1); // start equipped with the sword
+		addItem(inventory, kItemSword, 1); // start with all three so weapon-swap (Q) works immediately
+		addItem(inventory, kItemDagger, 1);
+		addItem(inventory, kItemMace, 1);
 		equippedItem = kItemSword;
 		weapon = weaponDefFor(equippedItem, swordDef);
 		for (const world::Entity& ent : r.data.entities)
