@@ -9,6 +9,7 @@ Everything that draws. raylib lives here.
 | `WorldRenderer.{h,cpp}` | Uploads `world::WorldGeometry` (per-texture `MeshData`) to raylib meshes + the world shader; `draw(camPos)` sets fog/camera uniforms. Missing texture PNG → a generated checker placeholder (assets are local/optional). |
 | `Viewmodel.{h,cpp}` | First-person torch (left) + sword (right), drawn over the world with depth-test off (own near camera, `rlgl`) inside the low-res RT. Procedural placeholder geometry + torch flicker + movement bob, until sprites/models exist. |
 | `Billboard.{h,cpp}` | Enemy sprites — Y-facing upright billboards (`DrawBillboardPro`, anchored at the **feet**), **depth-sorted far→near** (`depthSortEnemies`, pure/tested), state-tinted, with a contact-shadow disc. Skeleton sprite from `assets/sprites/skeleton.png` or a generated placeholder. The `RenderKind` seam: draws `Billboard`-kind enemies; `Box`-kind stay debug cubes (toggle **B**). |
+| `Prop.{h,cpp}` | Destructible props + loot pickups — placeholder 3D: barrels/kegs = cylinders (hoop bands), crates = cubes; a debris puff on break; a bobbing health orb. Reads `combat::Destructible`/`Pickup`; presentation only. |
 | `MetricsOverlay.{h,cpp}` | Draws a `Metrics` snapshot at native res. Presentation only; reads, never mutates. |
 
 ## Pipeline notes (gotchas)

@@ -43,11 +43,13 @@ set(ADVENTURE_LIB_SOURCES
     src/combat/Melee.cpp
     src/combat/CombatSystem.cpp
     src/combat/Rage.cpp
+    src/combat/Destructible.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
     src/render/Viewmodel.cpp
     src/render/Billboard.cpp
+    src/render/Prop.cpp
     src/lua/ScriptEngine.cpp
     src/lua/Bindings.cpp                 # the only TU that includes LuaBridge
 )
@@ -101,6 +103,7 @@ add_executable(adventure_tests
     tests/test_rage.cpp
     tests/test_billboard.cpp
     tests/test_hazard.cpp
+    tests/test_destructible.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

@@ -5,6 +5,7 @@
 #include "core/Metrics.h"
 #include "core/ProfileReport.h"
 #include "combat/CombatSystem.h"
+#include "combat/Destructible.h"
 #include "combat/Melee.h"
 #include "combat/Rage.h"
 #include "lua/ScriptEngine.h"
@@ -12,6 +13,7 @@
 #include "player/PlayerController.h"
 #include "render/MetricsOverlay.h"
 #include "render/Billboard.h"
+#include "render/Prop.h"
 #include "render/Renderer.h"
 #include "render/Viewmodel.h"
 #include "render/WorldRenderer.h"
@@ -113,6 +115,9 @@ int main()
 	world::CollisionWorld collision;
 	world::WorldGeometry geo;
 	std::vector<world::Hazard> hazards;
+	std::vector<Destructible> props;
+	std::vector<Pickup> pickups;
+	PropTuning propTune;
 	Player player;
 	std::vector<Enemy> enemies;
 	auto loadMap = [&](const char* path) {
@@ -169,7 +174,42 @@ int main()
 			e.position.y = y;
 		}
 
-		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size());
+		// Destructible props: barrels / crates / kegs from prop_* entities (kegs + loot="health" drop a pickup).
+		props.clear();
+		pickups.clear();
+		for (const world::Entity& ent : r.data.entities)
+		{
+			PropKind kind;
+			if (ent.classname == "prop_barrel")
+				kind = PropKind::Barrel;
+			else if (ent.classname == "prop_crate")
+				kind = PropKind::Crate;
+			else if (ent.classname == "prop_keg")
+				kind = PropKind::Keg;
+			else
+				continue;
+
+			Destructible d;
+			d.kind = kind;
+			d.radius = kind == PropKind::Crate ? 0.4f : 0.35f;
+			d.height = kind == PropKind::Crate ? 0.8f : (kind == PropKind::Keg ? 0.7f : 1.0f);
+			d.health = d.maxHealth = kind == PropKind::Crate ? 20.0f : 30.0f;
+			if (ent.str("loot") == "health" || kind == PropKind::Keg)
+				d.loot = LootKind::Health;
+			d.position = world::mapToEngine(ent.vec3("origin"));
+			d.position.y += d.height * 0.5f; // origin at feet -> center
+			const Vector3 ph = {d.radius, d.height * 0.5f, d.radius};
+			float y = d.position.y + 1.0f;
+			const float lo = y - 8.0f;
+			while (y > lo && !collision.overlaps(Vector3{d.position.x, y, d.position.z}, ph))
+				y -= 0.05f;
+			while (collision.overlaps(Vector3{d.position.x, y, d.position.z}, ph))
+				y += 0.02f;
+			d.position.y = y;
+			props.push_back(d);
+		}
+
+		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies, %d props", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size(), (int)props.size());
 	};
 
 	loadTuning();
@@ -234,6 +274,11 @@ int main()
 		if (IsKeyPressed(KEY_F) && kickCooldown <= 0.0f) // kick: knock enemies back
 		{
 			tryKick(player.position, player.yaw, enemies, kickReach, kickImpulse, enemyTune);
+			{
+				const Vector3 kf = {sinf(player.yaw), 0.0f, -cosf(player.yaw)};
+				const Vector3 kp = {player.position.x + kf.x * kickReach * 0.7f, player.position.y, player.position.z + kf.z * kickReach * 0.7f};
+				damageProps(props, pickups, kp, kickReach * 0.7f, 1000.0f, propTune); // a kick shatters props
+			}
 			kickCooldown = 0.7f;
 		}
 		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
@@ -286,9 +331,17 @@ int main()
 					updatePlayer(player, in, collision, tune, config::kFixedDt);
 					jumpMeter.update(player, config::kFixedDt);
 				}
+				const MeleePhase prevMeleePhase = melee.phase;
 				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune)); // berserk swings faster
 				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune));
-				addRage(rage, rageTune, hitResult.hits, hitResult.kills); // landed melee builds rage
+				addRage(rage, rageTune, hitResult.hits, hitResult.kills);                      // landed melee builds rage
+				if (melee.phase == MeleePhase::Active && prevMeleePhase != MeleePhase::Active) // swing just went live -> smash props in front
+				{
+					const Vector3 fwd = {sinf(player.yaw), 0.0f, -cosf(player.yaw)};
+					const Vector3 hit = {player.position.x + fwd.x * weapon.reach * 0.6f, player.position.y, player.position.z + fwd.z * weapon.reach * 0.6f};
+					const float dmg = weapon.damage * (1.0f + chargeFraction(melee, weapon) * weapon.chargeDamageMul) * rageDamageMul(rage, rageTune);
+					damageProps(props, pickups, hit, weapon.reach * 0.55f, dmg, propTune);
+				}
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
@@ -297,6 +350,8 @@ int main()
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
+				updateProps(props, propTune, config::kFixedDt);
+				collectPickups(pickups, player.position, player.health, player.maxHealth, propTune);
 				{
 					const Vector3 pf = {player.position.x, player.position.y - tune.height * 0.5f, player.position.z};
 					player.health -= world::hazardDamageAt(hazards, pf) * config::kFixedDt; // stand in it, take damage
@@ -353,6 +408,8 @@ int main()
 				DrawCubeWires(box, e.radius * 2.0f, bh, e.radius * 2.0f, Color{40, 40, 45, 255});
 			}
 			enemyBillboards.draw(cam, enemies); // RenderKind::Billboard, depth-sorted + state-tinted
+			drawProps(props, (float)GetTime());
+			drawPickups(pickups, (float)GetTime());
 			EndMode3D();
 			if (!noclip)
 			{

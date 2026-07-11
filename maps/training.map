@@ -136,3 +136,21 @@
 ( -192 48 42 ) ( -192 128 42 ) ( 192 48 42 ) trigger [ 1 0 0 0 ] [ 0 1 0 0 ] 0 1 1
 }
 }
+// Destructible props: smash with melee, kick to shatter. The keg + loot="health" crate drop a health orb.
+{
+"classname" "prop_barrel"
+"origin" "-64 -64 0"
+}
+{
+"classname" "prop_barrel"
+"origin" "-32 -64 0"
+}
+{
+"classname" "prop_crate"
+"origin" "48 -64 0"
+"loot" "health"
+}
+{
+"classname" "prop_keg"
+"origin" "16 -80 0"
+}
