@@ -4,7 +4,7 @@ namespace adventure
 {
 	namespace
 	{
-		const SkillNode kNodes[SKILL_COUNT] = {
+		SkillNode kNodes[SKILL_COUNT] = {
 		    // name           tree        maxRank  cost{r0,r1,r2}   prereq          prereqRank
 		    {"Toughness", "Combat", 3, {1, 2, 4}, -1, 0},
 		    {"Power", "Combat", 2, {2, 4, 0}, SKILL_TOUGHNESS, 1},
@@ -46,13 +46,19 @@ namespace adventure
 		return true;
 	}
 
-	Stats deriveStats(const SkillState& s)
+	void setSkillCost(int id, int rank, int cost)
+	{
+		if (id >= 0 && id < SKILL_COUNT && rank >= 0 && rank < 3)
+			kNodes[id].cost[rank] = cost;
+	}
+
+	Stats deriveStats(const SkillState& s, const SkillTuning& t)
 	{
 		Stats st;
-		st.maxHealthBonus = s.rank[SKILL_TOUGHNESS] * 20.0f;
-		st.damageMul = 1.0f + s.rank[SKILL_POWER] * 0.15f;
-		st.rageBuildMul = 1.0f + s.rank[SKILL_ADRENALINE] * 0.5f;
-		st.moveSpeedMul = 1.0f + s.rank[SKILL_ENDURANCE] * 0.08f;
+		st.maxHealthBonus = s.rank[SKILL_TOUGHNESS] * t.healthPerRank;
+		st.damageMul = 1.0f + s.rank[SKILL_POWER] * t.damagePerRank;
+		st.rageBuildMul = 1.0f + s.rank[SKILL_ADRENALINE] * t.rageBonus;
+		st.moveSpeedMul = 1.0f + s.rank[SKILL_ENDURANCE] * t.speedPerRank;
 		st.lockpick = s.rank[SKILL_LOCKPICK] > 0;
 		return st;
 	}

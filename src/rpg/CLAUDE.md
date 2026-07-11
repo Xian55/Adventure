@@ -22,8 +22,14 @@ trim the node count.
 - **Spend UI**: the `SkillMenu` action (default K, rebindable via `src/input`) opens a native-res overlay
   that pauses the sim; Up/Down select, Enter unlocks. (The only in-game menu so far.)
 
+## Data (Lua)
+Per-rank **costs** + effect **magnitudes** live in `scripts/skills.lua` (loaded by `main` via
+`evalNumber`, hot-reload F5): `setSkillCost(id,rank,cost)` overrides costs; a `SkillTuning`
+(healthPerRank/damagePerRank/rageBonus/speedPerRank) feeds `deriveStats(state, tuning)`. Node **names**,
+**prereqs**, and which effect each node drives stay in C++ (`deriveStats` branches on node).
+
 ## Rules / gotchas
-- Keep it pure/tested; numbers live in the `kNodes` table (move to Lua when the bridge can read a table).
+- Keep it pure/tested; the tree shape is C++, the numbers are Lua data.
 - Effects are derived, not stored — recompute `deriveStats` rather than caching mutable stat fields.
 - New node? extend `SkillId` (before `Count`), add its `kNodes` row + its effect in `deriveStats`, add a test.
 

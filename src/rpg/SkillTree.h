@@ -32,11 +32,21 @@ namespace adventure
 		int rank[SKILL_COUNT] = {}; // current rank per node
 	};
 
-	int skillCost(int id, int currentRank);      // points to reach the next rank, or -1 if maxed
-	bool canUnlock(const SkillState& s, int id); // enough points + prereq met + not maxed
-	bool unlockSkill(SkillState& s, int id);     // spend points + rank up; false if not allowed
+	int skillCost(int id, int currentRank);        // points to reach the next rank, or -1 if maxed
+	bool canUnlock(const SkillState& s, int id);   // enough points + prereq met + not maxed
+	bool unlockSkill(SkillState& s, int id);       // spend points + rank up; false if not allowed
+	void setSkillCost(int id, int rank, int cost); // override a rank's cost (from scripts/skills.lua)
 
-	// Effective player stats derived from the unlocked nodes.
+	// Per-effect magnitudes (data — moved to scripts/skills.lua).
+	struct SkillTuning
+	{
+		float healthPerRank = 20.0f; // Toughness
+		float damagePerRank = 0.15f; // Power
+		float rageBonus = 0.5f;      // Adrenaline
+		float speedPerRank = 0.08f;  // Endurance
+	};
+
+	// Effective player stats derived from the unlocked nodes + tuning.
 	struct Stats
 	{
 		float maxHealthBonus = 0.0f;
@@ -45,5 +55,5 @@ namespace adventure
 		float rageBuildMul = 1.0f;
 		bool lockpick = false;
 	};
-	Stats deriveStats(const SkillState& s);
+	Stats deriveStats(const SkillState& s, const SkillTuning& t = SkillTuning{});
 } // namespace adventure

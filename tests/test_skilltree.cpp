@@ -57,8 +57,25 @@ TEST_CASE("derived stats reflect unlocked ranks")
 	s.rank[SKILL_ENDURANCE] = 1;
 	s.rank[SKILL_LOCKPICK] = 1;
 	Stats st = deriveStats(s);
-	CHECK(st.maxHealthBonus == doctest::Approx(60.0)); // 3 * 20
+	CHECK(st.maxHealthBonus == doctest::Approx(60.0)); // 3 * 20 (default tuning)
 	CHECK(st.damageMul == doctest::Approx(1.30));      // 1 + 2 * 0.15
 	CHECK(st.moveSpeedMul == doctest::Approx(1.08));   // 1 + 1 * 0.08
 	CHECK(st.lockpick);
+}
+
+TEST_CASE("skill tuning scales effects; setSkillCost overrides a rank cost")
+{
+	SkillState s;
+	s.rank[SKILL_TOUGHNESS] = 2;
+	SkillTuning t;
+	t.healthPerRank = 50.0f;
+	CHECK(deriveStats(s, t).maxHealthBonus == doctest::Approx(100.0)); // 2 * 50
+	CHECK(deriveStats(s).maxHealthBonus == doctest::Approx(40.0));     // default 20
+
+	setSkillCost(SKILL_TOUGHNESS, 0, 5);
+	SkillState p;
+	p.points = 4;
+	CHECK_FALSE(canUnlock(p, SKILL_TOUGHNESS)); // rank-0 now costs 5
+	setSkillCost(SKILL_TOUGHNESS, 0, 1);        // restore for other tests
+	CHECK(canUnlock(p, SKILL_TOUGHNESS));
 }

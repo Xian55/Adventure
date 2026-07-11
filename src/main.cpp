@@ -81,14 +81,16 @@ int main()
 
 	// --- Tuning (hot-reloadable: F5) ---
 	MoveTuning tune;
-	WeaponDef weapon;   // the active weapon's def (equipped)
-	WeaponDef swordDef; // the Lua-tuned sword base; other weapons derive from it
+	WeaponDef weapon;                       // the active weapon's def (equipped)
+	WeaponDef swordDef, daggerDef, maceDef; // per-weapon defs, loaded from scripts/weapons/*.lua
 	int equippedItem = kItemSword;
+	auto equipDef = [&](int id) { return id == kItemDagger ? daggerDef : (id == kItemMace ? maceDef : swordDef); };
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
 	float kickReach = 1.6f, kickImpulse = 14.0f;
 	EnemyTuning enemyTune;
 	RageTuning rageTune;
 	RageState rage;
+	SkillTuning skillTune;
 	auto loadTuning = [&]() {
 		sScript->runFile("scripts/tuning.lua");
 		tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
@@ -104,16 +106,26 @@ int main()
 		weaponBob = (float)sScript->evalNumber("tuning.weaponBob", weaponBob);
 		headBob = (float)sScript->evalNumber("tuning.headBob", headBob);
 
+		auto loadWeapon = [&](const char* prefix, WeaponDef& d) {
+			const std::string b = prefix;
+			d.active = (float)sScript->evalNumber(b + ".active", d.active);
+			d.recovery = (float)sScript->evalNumber(b + ".recovery", d.recovery);
+			d.reach = (float)sScript->evalNumber(b + ".reach", d.reach);
+			d.arc = (float)sScript->evalNumber(b + ".arc", d.arc);
+			d.damage = (float)sScript->evalNumber(b + ".damage", d.damage);
+			d.knockback = (float)sScript->evalNumber(b + ".knockback", d.knockback);
+			d.chargeMax = (float)sScript->evalNumber(b + ".chargeMax", d.chargeMax);
+			d.chargeDamageMul = (float)sScript->evalNumber(b + ".chargeDamageMul", d.chargeDamageMul);
+		};
 		sScript->runFile("scripts/weapons/sword.lua");
-		swordDef.active = (float)sScript->evalNumber("sword.active", swordDef.active);
-		swordDef.recovery = (float)sScript->evalNumber("sword.recovery", swordDef.recovery);
-		swordDef.reach = (float)sScript->evalNumber("sword.reach", swordDef.reach);
-		swordDef.arc = (float)sScript->evalNumber("sword.arc", swordDef.arc);
-		swordDef.damage = (float)sScript->evalNumber("sword.damage", swordDef.damage);
-		swordDef.knockback = (float)sScript->evalNumber("sword.knockback", swordDef.knockback);
-		swordDef.chargeMax = (float)sScript->evalNumber("sword.chargeMax", swordDef.chargeMax);
-		swordDef.chargeDamageMul = (float)sScript->evalNumber("sword.chargeDamageMul", swordDef.chargeDamageMul);
-		weapon = weaponDefFor(equippedItem, swordDef); // re-derive the active weapon after a tuning reload
+		loadWeapon("sword", swordDef);
+		sScript->runFile("scripts/weapons/dagger.lua");
+		daggerDef = weaponDefFor(kItemDagger, swordDef); // preset base, then override from Lua
+		loadWeapon("dagger", daggerDef);
+		sScript->runFile("scripts/weapons/mace.lua");
+		maceDef = weaponDefFor(kItemMace, swordDef);
+		loadWeapon("mace", maceDef);
+		weapon = equipDef(equippedItem); // re-derive the active weapon after a tuning reload
 		kickReach = (float)sScript->evalNumber("tuning.kickReach", kickReach);
 		kickImpulse = (float)sScript->evalNumber("tuning.kickImpulse", kickImpulse);
 
@@ -158,6 +170,28 @@ int main()
 		rageTune.berserkDuration = (float)sScript->evalNumber("tuning.berserkDuration", rageTune.berserkDuration);
 		rageTune.damageMul = (float)sScript->evalNumber("tuning.berserkDamageMul", rageTune.damageMul);
 		rageTune.speedMul = (float)sScript->evalNumber("tuning.berserkSpeedMul", rageTune.speedMul);
+
+		// Skill-tree data (per-rank costs + effect magnitudes) from scripts/skills.lua.
+		sScript->runFile("scripts/skills.lua");
+		const struct
+		{
+			int id;
+			const char* key;
+			int ranks;
+		} skRows[] = {
+		    {SKILL_TOUGHNESS, "toughness", 3},
+		    {SKILL_POWER, "power", 2},
+		    {SKILL_ADRENALINE, "adrenaline", 1},
+		    {SKILL_ENDURANCE, "endurance", 2},
+		    {SKILL_LOCKPICK, "lockpicking", 1},
+		};
+		for (const auto& sk : skRows)
+			for (int r = 0; r < sk.ranks; ++r)
+				setSkillCost(sk.id, r, (int)sScript->evalNumber("skills.costs." + std::string(sk.key) + "[" + std::to_string(r + 1) + "]", skillCost(sk.id, r)));
+		skillTune.healthPerRank = (float)sScript->evalNumber("skills.effects.healthPerRank", skillTune.healthPerRank);
+		skillTune.damagePerRank = (float)sScript->evalNumber("skills.effects.damagePerRank", skillTune.damagePerRank);
+		skillTune.rageBonus = (float)sScript->evalNumber("skills.effects.rageBonus", skillTune.rageBonus);
+		skillTune.speedPerRank = (float)sScript->evalNumber("skills.effects.speedPerRank", skillTune.speedPerRank);
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -195,9 +229,9 @@ int main()
 			player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
 		}
 		player.velocity = Vector3{0, 0, 0};
-		player.maxHealth = 100.0f + deriveStats(skills).maxHealthBonus; // Toughness raises the cap
-		player.health = player.maxHealth;                               // fresh spawn / respawn
-		rage = RageState{};                                             // lose the meter on death
+		player.maxHealth = 100.0f + deriveStats(skills, skillTune).maxHealthBonus; // Toughness raises the cap
+		player.health = player.maxHealth;                                          // fresh spawn / respawn
+		rage = RageState{};                                                        // lose the meter on death
 
 		// Spawn skeletons from monster_skeleton entities; if the map has none, drop a few in front so the
 		// combat slice always has targets.
@@ -245,7 +279,7 @@ int main()
 		addItem(inventory, kItemDagger, 1);
 		addItem(inventory, kItemMace, 1);
 		equippedItem = kItemSword;
-		weapon = weaponDefFor(equippedItem, swordDef);
+		weapon = equipDef(equippedItem);
 		for (const world::Entity& ent : r.data.entities)
 		{
 			PropKind kind;
@@ -412,7 +446,7 @@ int main()
 			if (IsKeyPressed(KEY_UP))
 				skillSel = (skillSel + SKILL_COUNT - 1) % SKILL_COUNT;
 			if (IsKeyPressed(KEY_ENTER) && unlockSkill(skills, skillSel))
-				player.maxHealth = 100.0f + deriveStats(skills).maxHealthBonus; // Toughness may have raised the cap
+				player.maxHealth = 100.0f + deriveStats(skills, skillTune).maxHealthBonus; // Toughness may have raised the cap
 		}
 
 		if (IsKeyPressed(KEY_F3))
@@ -463,7 +497,7 @@ int main()
 			if (n != kItemNone && n != equippedItem)
 			{
 				equippedItem = n;
-				weapon = weaponDefFor(equippedItem, swordDef);
+				weapon = equipDef(equippedItem);
 			}
 		}
 		// Use (E): the nearest facing lever, then door, then chest.
@@ -472,7 +506,7 @@ int main()
 		const int chestTarget = nearestContainer(containers, player.position, player.yaw, 2.2f);
 		if (actionPressed(keys, Action::Interact) && !showSkills)
 		{
-			const bool lockpick = deriveStats(skills).lockpick; // Lockpicking opens locks without a key
+			const bool lockpick = deriveStats(skills, skillTune).lockpick; // Lockpicking opens locks without a key
 			if (leverTarget >= 0)
 				levers[leverTarget].on = !levers[leverTarget].on;
 			else if (doorTarget >= 0)
@@ -504,8 +538,8 @@ int main()
 		// Fixed-step movement (walk/collide) or free-fly (noclip).
 		{
 			Metrics::Scope s(metrics, "update");
-			const Stats st = deriveStats(skills); // skill effects
-			MoveTuning mt = tune;                 // move-speed skill applies to a working copy
+			const Stats st = deriveStats(skills, skillTune); // skill effects
+			MoveTuning mt = tune;                            // move-speed skill applies to a working copy
 			mt.moveSpeed *= st.moveSpeedMul;
 			mt.sprintSpeed *= st.moveSpeedMul;
 			RageTuning rageEff = rageTune; // rage-build skill scales gains
@@ -694,7 +728,7 @@ int main()
 					DrawRectangle(px - 10, y - 5, 760, 32, Color{60, 55, 40, 200});
 				DrawText(TextFormat("%-12s [%s]  rank %d/%d  cost %d  - %s", n.name, n.tree, rank, n.maxRank, cost < 0 ? 0 : cost, status), px, y, 22, sel ? Color{255, 240, 180, 255} : Color{210, 210, 215, 255});
 			}
-			const Stats sst = deriveStats(skills);
+			const Stats sst = deriveStats(skills, skillTune);
 			DrawText(TextFormat("HP +%d    dmg x%.2f    speed x%.2f    rage x%.2f    lockpick %s", (int)sst.maxHealthBonus, sst.damageMul, sst.moveSpeedMul, sst.rageBuildMul, sst.lockpick ? "yes" : "no"), px, py + 34 + SKILL_COUNT * 34 + 14, 20, Color{150, 205, 150, 255});
 		}
 		{ // Gameplay HUD (native res, lower-left): health, rage, block/berserk, inventory.
