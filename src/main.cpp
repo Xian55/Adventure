@@ -229,6 +229,8 @@ int main()
 	JumpMeter jumpMeter;
 	MeleeState melee;
 	float kickCooldown = 0.0f;
+	float kickAnim = 0.0f; // boot-kick viewmodel timer (counts down from kickAnimTime)
+	const float kickAnimTime = 0.3f;
 	float accumulator = 0.0f;
 	float bobPhase = 0.0f;
 
@@ -280,6 +282,7 @@ int main()
 				damageProps(props, pickups, kp, kickReach * 0.7f, 1000.0f, propTune); // a kick shatters props
 			}
 			kickCooldown = 0.7f;
+			kickAnim = kickAnimTime; // trigger the boot-kick animation
 		}
 		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
 		{
@@ -354,6 +357,8 @@ int main()
 				}
 				if (kickCooldown > 0.0f)
 					kickCooldown -= config::kFixedDt;
+				if (kickAnim > 0.0f)
+					kickAnim -= config::kFixedDt;
 				accumulator -= config::kFixedDt;
 				if (player.health <= 0.0f) // died -> respawn (resets map, enemies, health)
 				{
@@ -410,7 +415,7 @@ int main()
 			if (!noclip)
 			{
 				int vmDir = (melee.phase == MeleePhase::Charge) ? (int)melee.dir : (int)melee.resolved;
-				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon));
+				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon), kickAnim > 0.0f ? kickAnim / kickAnimTime : 0.0f);
 			}
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
 			// Health bar (bottom-left of the low-res frame) + block indicator.

@@ -8,7 +8,7 @@
 
 namespace adventure
 {
-	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress, int swingDir, float charge)
+	void drawViewmodel(float bobPhase, float bobAmount, float t, int meleePhase, float meleeProgress, int swingDir, float charge, float kick)
 	{
 		Camera3D vcam{};
 		vcam.position = Vector3{0, 0, 0};
@@ -113,6 +113,21 @@ namespace adventure
 			DrawCube(Vector3{0, 0.62f, 0}, 0.012f, 0.86f, 0.02f, Color{150, 165, 158, 255});    // fuller (center ridge)
 			DrawCylinderEx(Vector3{0, 1.05f, 0}, Vector3{0, 1.24f, 0}, 0.030f, 0.0f, 4, steel); // tapered point -> reads as a blade, not a paddle
 			DrawCylinderWiresEx(Vector3{0, 1.05f, 0}, Vector3{0, 1.24f, 0}, 0.030f, 0.0f, 4, steelDk);
+			rlPopMatrix();
+		}
+
+		// Kick: a boot thrusts up from the bottom-centre of the view and retracts (feedback for the F kick).
+		if (kick > 0.0f)
+		{
+			const float e = 1.0f - kick;       // 0 = start of the kick .. 1 = done
+			const float th = std::sin(e * PI); // thrust envelope: 0 -> 1 (foot out) -> 0
+			rlPushMatrix();
+			rlTranslatef(0.06f, -0.9f + 0.5f * th, -0.55f - 0.4f * th);
+			rlRotatef(-62.0f + 48.0f * th, 1, 0, 0);                                    // swing the shin up toward the crosshair
+			DrawCube(Vector3{0, 0.2f, 0}, 0.14f, 0.52f, 0.14f, Color{58, 54, 66, 255}); // shin / trouser
+			DrawCubeWires(Vector3{0, 0.2f, 0}, 0.14f, 0.52f, 0.14f, Color{34, 31, 40, 255});
+			DrawCube(Vector3{0, 0.48f, 0.07f}, 0.16f, 0.14f, 0.28f, Color{46, 36, 30, 255}); // boot
+			DrawCubeWires(Vector3{0, 0.48f, 0.07f}, 0.16f, 0.14f, 0.28f, Color{20, 15, 13, 255});
 			rlPopMatrix();
 		}
 
