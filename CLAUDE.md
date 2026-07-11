@@ -5,8 +5,8 @@ Retro look = low-res render + point upscale + fog + dither. Status: **M0 + M1 do
 progress** — `.map` parse + geometry/collision (`src/world`), world rendering (`render/WorldRenderer`),
 Quake first-person movement + AABB-vs-brush collision (`src/player`), torch+sword viewmodel
 (`render/Viewmodel`), Lua feel-tuning, and a combat slice: directional melee, one skeleton that approaches /
-telegraphs / strikes back, kick knockback, shield block, player health + respawn (`src/combat`). **Next in
-M2**: rage→berserk meter, then billboard enemy sprites. Controls: WASD + mouse-look, Shift sprint, Space
+telegraphs / strikes back, kick knockback, shield block, player health + respawn, rage→berserk meter
+(`src/combat`). **Next in M2**: billboard enemy sprites (then `trigger_hurt` hazards). Controls: WASD + mouse-look, Shift sprint, Space
 jump, Ctrl crouch, **hold Left-click to wind up + WASD to aim (A/D slash, W thrust, S overhead) + release to
 strike**, F kick (knockback), **hold Right-click to block**. Dev tools: F3 metrics, F4 telemetry (jump/dims/pos),
 **V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**. Default map `maps/training.map`; override

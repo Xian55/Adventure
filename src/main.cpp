@@ -6,6 +6,7 @@
 #include "core/ProfileReport.h"
 #include "combat/CombatSystem.h"
 #include "combat/Melee.h"
+#include "combat/Rage.h"
 #include "lua/ScriptEngine.h"
 #include "player/JumpMeter.h"
 #include "player/PlayerController.h"
@@ -52,6 +53,8 @@ int main()
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
 	float kickReach = 1.6f, kickImpulse = 14.0f;
 	EnemyTuning enemyTune;
+	RageTuning rageTune;
+	RageState rage;
 	auto loadTuning = [&]() {
 		sScript->runFile("scripts/tuning.lua");
 		tune.moveSpeed = (float)sScript->evalNumber("tuning.moveSpeed", tune.moveSpeed);
@@ -88,6 +91,15 @@ int main()
 		enemyTune.attackReach = (float)sScript->evalNumber("tuning.enemyAttackReach", enemyTune.attackReach);
 		enemyTune.attackDamage = (float)sScript->evalNumber("tuning.enemyAttackDamage", enemyTune.attackDamage);
 		enemyTune.staggerTime = (float)sScript->evalNumber("tuning.enemyStaggerTime", enemyTune.staggerTime);
+
+		rageTune.max = (float)sScript->evalNumber("tuning.rageMax", rageTune.max);
+		rageTune.gainPerHit = (float)sScript->evalNumber("tuning.rageGainPerHit", rageTune.gainPerHit);
+		rageTune.gainPerKill = (float)sScript->evalNumber("tuning.rageGainPerKill", rageTune.gainPerKill);
+		rageTune.decayPerSec = (float)sScript->evalNumber("tuning.rageDecayPerSec", rageTune.decayPerSec);
+		rageTune.decayDelay = (float)sScript->evalNumber("tuning.rageDecayDelay", rageTune.decayDelay);
+		rageTune.berserkDuration = (float)sScript->evalNumber("tuning.berserkDuration", rageTune.berserkDuration);
+		rageTune.damageMul = (float)sScript->evalNumber("tuning.berserkDamageMul", rageTune.damageMul);
+		rageTune.speedMul = (float)sScript->evalNumber("tuning.berserkSpeedMul", rageTune.speedMul);
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -115,6 +127,7 @@ int main()
 		}
 		player.velocity = Vector3{0, 0, 0};
 		player.health = player.maxHealth; // fresh spawn / respawn
+		rage = RageState{};               // lose the meter on death
 
 		// Spawn skeletons from monster_skeleton entities; if the map has none, drop a few in front so the
 		// combat slice always has targets.
@@ -251,14 +264,16 @@ int main()
 					updatePlayer(player, in, collision, tune, config::kFixedDt);
 					jumpMeter.update(player, config::kFixedDt);
 				}
-				updateMelee(melee, weapon, config::kFixedDt);
-				resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune);
+				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune)); // berserk swings faster
+				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune));
+				addRage(rage, rageTune, hitResult.hits, hitResult.kills); // landed melee builds rage
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
 				tgt.shieldRaised = IsMouseButtonDown(MOUSE_BUTTON_RIGHT); // hold RMB to block
 				tgt.health = &player.health;
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
+				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
 				if (kickCooldown > 0.0f)
 					kickCooldown -= config::kFixedDt;
 				accumulator -= config::kFixedDt;
@@ -319,7 +334,15 @@ int main()
 				DrawRectangle(bx - 1, by - 1, bw + 2, bh2 + 2, Color{20, 15, 15, 220});
 				DrawRectangle(bx, by, (int)(bw * hp), bh2, Color{170, 50, 45, 255});
 				if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
-					DrawText("BLOCK", bx, by - 12, 10, Color{150, 190, 230, 255});
+					DrawText("BLOCK", bx + bw + 6, by, 10, Color{150, 190, 230, 255});
+				// Rage meter above the health bar; glows + flashes "BERSERK" when maxed.
+				const float rf = rageFraction(rage, rageTune);
+				const int ry = by - 9;
+				DrawRectangle(bx - 1, ry - 1, bw + 2, 7, Color{20, 15, 15, 220});
+				const Color rageCol = rage.berserk ? Color{255, (unsigned char)(150 + (int)(80 * sinf((float)GetTime() * 18.0f))), 30, 255} : Color{210, 120, 40, 255};
+				DrawRectangle(bx, ry, (int)(bw * rf), 5, rageCol);
+				if (rage.berserk)
+					DrawText("BERSERK", bx + bw + 6, ry - 2, 10, Color{255, 170, 40, 255});
 			}
 			renderer.endScene();
 		}

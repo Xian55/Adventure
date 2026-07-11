@@ -32,6 +32,16 @@ tuning = {
 	enemyAttackReach  = 1.9,
 	enemyAttackDamage = 12.0,
 	enemyStaggerTime  = 0.45,
+
+	-- rage -> berserk: landed melee builds the meter; maxed flips to a timed berserk (drains as it runs).
+	rageMax          = 100.0,
+	rageGainPerHit   = 16.0,
+	rageGainPerKill  = 30.0,
+	rageDecayPerSec  = 12.0,
+	rageDecayDelay   = 2.5,
+	berserkDuration  = 6.0,
+	berserkDamageMul = 1.6,
+	berserkSpeedMul  = 1.5,
 }
 
 print(string.format("tuning loaded: walk=%.1f sprint=%.1f friction=%.1f gravity=%.1f",

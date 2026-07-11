@@ -86,10 +86,11 @@ namespace adventure
 		}
 	}
 
-	void resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t)
+	MeleeHitResult resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t, float damageMul)
 	{
+		MeleeHitResult result;
 		if (!hitboxActive(melee) || melee.hitThisSwing)
-			return;
+			return result;
 
 		// Aim shifts with the swing direction (left/right slashes reach to that side); charge scales power.
 		float aimYaw = playerYaw;
@@ -98,13 +99,12 @@ namespace adventure
 		else if (melee.resolved == SwingDir::Right)
 			aimYaw += weapon.arc * 0.35f;
 		const float charge = chargeFraction(melee, weapon);
-		const float dmg = weapon.damage * (1.0f + charge * weapon.chargeDamageMul);
+		const float dmg = weapon.damage * (1.0f + charge * weapon.chargeDamageMul) * damageMul;
 		const float kb = weapon.knockback * (1.0f + charge * 0.5f);
 
 		const float fx = std::sin(aimYaw);
 		const float fz = -std::cos(aimYaw);
 		const float cosHalf = std::cos(weapon.arc * 0.5f);
-		bool anyHit = false;
 
 		for (Enemy& e : enemies)
 		{
@@ -126,17 +126,19 @@ namespace adventure
 			{
 				e.state = EnemyState::Dead;
 				e.stateTimer = t.deathTime;
+				++result.kills;
 			}
 			else
 			{
 				e.state = EnemyState::Stagger;
 				e.stateTimer = t.staggerTime;
 			}
-			anyHit = true;
+			++result.hits;
 		}
 
-		if (anyHit)
+		if (result.hits > 0)
 			melee.hitThisSwing = true; // this swing has connected; don't hit again
+		return result;
 	}
 
 	void tryKick(Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, float reach, float impulse, const EnemyTuning& t)

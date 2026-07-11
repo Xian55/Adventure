@@ -6,7 +6,8 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
 |------|----------------|
 | `Melee.{h,cpp}` | Dark Messiah–style directional melee: **hold to wind up (Charge), release to strike**. `beginCharge`/`setSwingDir`/`releaseSwing` + `updateMelee` (Idle→Charge→Active→Recovery→Idle). `SwingDir` from WASD (Left/Right/Forward/Overhead); **Neutral (no key) alternates Left/Right**. Direction **snapshots at the first key picked during the charge** (`dirLocked`) — later key changes are ignored, so a swing commits to what you aimed. `chargeFraction` scales damage (hold longer = stronger). `WeaponDef` from Lua. Same charge/release pattern a **bow draw** will reuse (M5). |
 | `Enemy.h` | `Enemy` struct (pos/vel/health/`EnemyState` Approach/**Windup**/**Recover**/Stagger/Dead/timer/dims) — a skeleton. Rendered as a placeholder box until sprites. |
-| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI → **Windup telegraph → strike the player** (reduced by a facing shield) → Recover; knockback integration; stagger/death timers; writes `PlayerTarget.health`), `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage/knockback/stagger/kill, one hit per swing), `tryKick` (shove enemies in a forward cone hard + stagger — environmental-kill move; also interrupts a windup). `EnemyTuning` (approach/attack/block numbers), `PlayerTarget` (what an enemy needs to hit back). |
+| `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI → **Windup telegraph → strike the player** (reduced by a facing shield) → Recover; knockback integration; stagger/death timers; writes `PlayerTarget.health`), `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage×`damageMul`/knockback/stagger/kill, one hit per swing; returns `MeleeHitResult{hits,kills}` to feed rage), `tryKick` (shove enemies in a forward cone hard + stagger — environmental-kill move; also interrupts a windup). `EnemyTuning` (approach/attack/block numbers), `PlayerTarget` (what an enemy needs to hit back). |
+| `Rage.{h,cpp}` | Rage → berserk meter (DM combat resource). `addRage` (landed melee/kills build it; maxing flips to berserk), `updateRage` (drain over the berserk window, else bleed after a grace delay), `rageDamageMul`/`rageSpeedMul` (berserk buffs), `rageFraction` (HUD). Pure/tested. `RageTuning` from Lua. |
 
 ## Flow
 - Input buffers a swing (`requestSwing`, on attack press). `updateMelee` runs each **fixed step** (in
@@ -29,6 +30,13 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
   `main` respawns via `loadMap` (resets map, enemies, health). HUD draws a health bar + BLOCK indicator.
 - Enemy attack numbers are Lua-tunable (`tuning.enemy*`, `tuning.block*`), hot-reloaded with F5.
 
+## Rage → berserk (M2d)
+`Rage.{h,cpp}`, pure/tested. Landed melee builds rage (`gainPerHit`, kills add `gainPerKill`); filling the
+meter flips to **berserk** for `berserkDuration` — melee damage ×`damageMul`, swings ×`speedMul` (main scales
+`updateMelee`'s dt) — then the meter drains to empty and resets. Idle bleeds rage after `decayDelay`. Death
+clears it. `resolveMeleeHits` returns the hit/kill count that feeds `addRage`; berserk multipliers flow back
+into `resolveMeleeHits(..., damageMul)` and the swing-speed dt. Numbers in `tuning.rage*`/`tuning.berserk*`.
+
 ## Coming
-Rage → berserk meter (repeated hits build rage; maxed = temporary berserk — DM resource). Swap enemy boxes
-→ billboard sprites (`RenderKind` seam). Player + enemies move into the ECS as components.
+Swap enemy boxes → billboard sprites (`RenderKind` seam). Player + enemies move into the ECS as components.
+`trigger_hurt` hazards so the kick's environmental-kill payoff is real.

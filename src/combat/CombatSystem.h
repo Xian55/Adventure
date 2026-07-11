@@ -35,9 +35,16 @@ namespace adventure
 	// and strike the player (reduced/negated by a facing shield); the target's health is written through.
 	void updateEnemies(std::vector<Enemy>& enemies, PlayerTarget& player, const EnemyTuning& t, float dt);
 
+	// Enemies touched by a single swing resolution (feeds the rage meter).
+	struct MeleeHitResult
+	{
+		int hits = 0;
+		int kills = 0;
+	};
+
 	// If the player's melee hitbox is live (and this swing hasn't hit yet), damage every enemy inside the
-	// reach + arc: apply damage, knock them back, stagger (or kill). One resolution per swing.
-	void resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t);
+	// reach + arc: apply damage (× damageMul), knock them back, stagger (or kill). One resolution per swing.
+	MeleeHitResult resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t, float damageMul = 1.0f);
 
 	// Kick: shove every enemy in a short forward cone hard (impulse velocity) and stagger them — the
 	// Dark Messiah environmental-kill move (knock into hazards/off ledges). Cooldown is caller-managed.
