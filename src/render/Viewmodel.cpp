@@ -124,6 +124,15 @@ namespace adventure
 				DrawCube(Vector3{0.14f, 0.66f, 0}, 0.09f, 0.05f, 0.05f, Color{160, 162, 172, 255}); // side spikes
 				DrawCube(Vector3{-0.14f, 0.66f, 0}, 0.09f, 0.05f, 0.05f, Color{160, 162, 172, 255});
 			}
+			else if (weapon == 3) // Crossbow: horizontal bow across a stock
+			{
+				const Color wood = Color{95, 72, 48, 255};
+				const Color metal = Color{120, 122, 132, 255};
+				DrawCube(Vector3{0, 0.14f, 0}, 0.06f, 0.36f, 0.07f, wood);                   // stock (points forward = up in local)
+				DrawCube(Vector3{0, 0.30f, 0}, 0.5f, 0.05f, 0.05f, wood);                    // bow limbs (across)
+				DrawCube(Vector3{0, 0.30f, 0}, 0.04f, 0.04f, 0.14f, metal);                  // string bridge / bolt groove
+				DrawCube(Vector3{0, 0.36f, 0}, 0.04f, 0.02f, 0.18f, Color{58, 48, 38, 255}); // loaded bolt
+			}
 			else // Sword (default): crossguard + tapered blade
 			{
 				DrawCube(Vector3{0, 0.17f, 0}, 0.19f, 0.04f, 0.055f, Color{150, 120, 70, 255}); // crossguard

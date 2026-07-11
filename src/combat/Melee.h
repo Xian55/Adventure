@@ -12,8 +12,10 @@ namespace adventure
 		float arc = 1.4f;   // radians the hitbox spans
 		float damage = 25.0f;
 		float knockback = 6.0f;
-		float chargeMax = 0.5f;       // seconds of hold for a full charge
-		float chargeDamageMul = 0.6f; // extra damage fraction at full charge (hold longer -> stronger)
+		float chargeMax = 0.5f;        // seconds of hold for a full charge
+		float chargeDamageMul = 0.6f;  // extra damage fraction at full charge (hold longer -> stronger)
+		bool ranged = false;           // fires a projectile on release instead of a melee hitbox
+		float projectileSpeed = 32.0f; // bolt launch speed (ranged only)
 	};
 
 	// Chosen by the held movement key during the charge. Neutral (no key) alternates Left/Right per swing.

@@ -8,6 +8,7 @@
 #include "combat/Destructible.h"
 #include "combat/Loadout.h"
 #include "combat/Melee.h"
+#include "combat/Projectile.h"
 #include "combat/Rage.h"
 #include "input/InputMap.h"
 #include "input/InputQuery.h"
@@ -81,10 +82,10 @@ int main()
 
 	// --- Tuning (hot-reloadable: F5) ---
 	MoveTuning tune;
-	WeaponDef weapon;                       // the active weapon's def (equipped)
-	WeaponDef swordDef, daggerDef, maceDef; // per-weapon defs, loaded from scripts/weapons/*.lua
+	WeaponDef weapon;                                    // the active weapon's def (equipped)
+	WeaponDef swordDef, daggerDef, maceDef, crossbowDef; // per-weapon defs, loaded from scripts/weapons/*.lua
 	int equippedItem = kItemSword;
-	auto equipDef = [&](int id) { return id == kItemDagger ? daggerDef : (id == kItemMace ? maceDef : swordDef); };
+	auto equipDef = [&](int id) { return id == kItemDagger ? daggerDef : (id == kItemMace ? maceDef : (id == kItemCrossbow ? crossbowDef : swordDef)); };
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
 	float kickReach = 1.6f, kickImpulse = 14.0f;
 	EnemyTuning enemyTune;
@@ -125,6 +126,10 @@ int main()
 		sScript->runFile("scripts/weapons/mace.lua");
 		maceDef = weaponDefFor(kItemMace, swordDef);
 		loadWeapon("mace", maceDef);
+		sScript->runFile("scripts/weapons/crossbow.lua");
+		crossbowDef = weaponDefFor(kItemCrossbow, swordDef);
+		loadWeapon("crossbow", crossbowDef);
+		crossbowDef.projectileSpeed = (float)sScript->evalNumber("crossbow.projectileSpeed", crossbowDef.projectileSpeed);
 		weapon = equipDef(equippedItem); // re-derive the active weapon after a tuning reload
 		kickReach = (float)sScript->evalNumber("tuning.kickReach", kickReach);
 		kickImpulse = (float)sScript->evalNumber("tuning.kickImpulse", kickImpulse);
@@ -142,6 +147,7 @@ int main()
 		    {kItemSword, "items.sword"},
 		    {kItemDagger, "items.dagger"},
 		    {kItemMace, "items.mace"},
+		    {kItemCrossbow, "items.crossbow"},
 		};
 		for (const auto& row : itemRows)
 		{
@@ -203,6 +209,7 @@ int main()
 	std::vector<world::Hazard> hazards;
 	std::vector<Destructible> props;
 	std::vector<Pickup> pickups;
+	std::vector<Projectile> bolts;
 	std::vector<Container> containers;
 	std::vector<Door> doors;
 	std::vector<Lever> levers;
@@ -275,9 +282,11 @@ int main()
 		levers.clear();
 		plates.clear();
 		inventory = Inventory{};           // fresh bag on (re)spawn
-		addItem(inventory, kItemSword, 1); // start with all three so weapon-swap (Q) works immediately
+		addItem(inventory, kItemSword, 1); // start with every weapon so swap (Q) works immediately
 		addItem(inventory, kItemDagger, 1);
 		addItem(inventory, kItemMace, 1);
+		addItem(inventory, kItemCrossbow, 1);
+		bolts.clear();
 		equippedItem = kItemSword;
 		weapon = equipDef(equippedItem);
 		for (const world::Entity& ent : r.data.entities)
@@ -479,7 +488,21 @@ int main()
 			setSwingDir(melee, d);
 		}
 		if (actionReleased(keys, Action::Attack))
+		{
+			if (weapon.ranged && melee.phase == MeleePhase::Charge) // fire a bolt (charge scales speed + damage)
+			{
+				const float charge = chargeFraction(melee, weapon);
+				const float sp = weapon.projectileSpeed * (0.4f + 0.6f * charge);
+				const Vector3 dir = {sinf(player.yaw) * cosf(player.pitch), sinf(player.pitch), -cosf(player.yaw) * cosf(player.pitch)};
+				Projectile b;
+				b.position = {player.position.x + dir.x * 0.4f, player.position.y + tune.eyeHeight - tune.height * 0.5f + dir.y * 0.4f, player.position.z + dir.z * 0.4f};
+				b.velocity = {dir.x * sp, dir.y * sp, dir.z * sp};
+				b.dir = dir; // stable render orientation (bolts don't tumble)
+				b.damage = weapon.damage * (1.0f + charge * weapon.chargeDamageMul) * deriveStats(skills, skillTune).damageMul;
+				bolts.push_back(b);
+			}
 			releaseSwing(melee);
+		}
 		if (actionPressed(keys, Action::Kick) && kickCooldown <= 0.0f) // kick: knock enemies back
 		{
 			tryKick(player.position, player.yaw, enemies, kickReach, kickImpulse, enemyTune);
@@ -583,9 +606,11 @@ int main()
 					}
 					jumpMeter.update(player, config::kFixedDt);
 				}
-				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune));                                                                                                                  // berserk swings faster
-				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune) * st.damageMul, &props, &pickups, &propTune); // Power skill scales damage
-				addRage(rage, rageEff, hitResult.hits, hitResult.kills);                                                                                                                                      // landed melee builds rage (Adrenaline scales)
+				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune)); // berserk swings faster
+				MeleeHitResult hitResult;
+				if (!weapon.ranged) // melee swings a hitbox; ranged fires bolts on release
+					hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune) * st.damageMul, &props, &pickups, &propTune);
+				addRage(rage, rageEff, hitResult.hits, hitResult.kills); // landed melee builds rage
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
@@ -607,6 +632,14 @@ int main()
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);
+				updateProjectiles(bolts, 2.0f, config::kFixedDt); // fast + nearly flat (small drop)
+				resolveProjectileHits(bolts, enemies, enemyTune);
+				for (Projectile& b : bolts) // a bolt that hits the world sticks where it lands
+					if (b.active && !b.stuck && collision.overlaps(b.position, Vector3{0.05f, 0.05f, 0.05f}))
+					{
+						b.stuck = true;
+						b.velocity = Vector3{0, 0, 0};
+					}
 				collectPickups(pickups, player.position, inventory, player.health, player.maxHealth, propTune.pickupRadius);
 				{ // mechanisms: plate weight (actors/props) -> activate linked doors -> animate
 					std::vector<Vector3> occupants;
@@ -684,12 +717,15 @@ int main()
 			drawLevers(levers);
 			drawPlates(plates);
 			drawProps(props, (float)GetTime());
+			for (const Projectile& b : bolts) // crossbow bolts
+				if (b.active)
+					DrawCylinderEx(Vector3{b.position.x - b.dir.x * 0.18f, b.position.y - b.dir.y * 0.18f, b.position.z - b.dir.z * 0.18f}, Vector3{b.position.x + b.dir.x * 0.18f, b.position.y + b.dir.y * 0.18f, b.position.z + b.dir.z * 0.18f}, 0.03f, 0.008f, 6, Color{58, 48, 38, 255});
 			drawPickups(pickups, (float)GetTime());
 			EndMode3D();
 			if (!noclip)
 			{
 				int vmDir = (melee.phase == MeleePhase::Charge) ? (int)melee.dir : (int)melee.resolved;
-				const int weaponModel = equippedItem == kItemDagger ? 1 : (equippedItem == kItemMace ? 2 : 0);
+				const int weaponModel = equippedItem == kItemDagger ? 1 : (equippedItem == kItemMace ? 2 : (equippedItem == kItemCrossbow ? 3 : 0));
 				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon), kickAnim > 0.0f ? kickAnim / kickAnimTime : 0.0f, weaponModel);
 			}
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);

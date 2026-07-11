@@ -40,6 +40,15 @@ namespace adventure
 			d.chargeMax = 0.7f;
 			d.chargeDamageMul = 0.8f;
 			break;
+		case kItemCrossbow: // ranged: hold to draw, release to fire a bolt
+			d.ranged = true;
+			d.projectileSpeed = 32.0f;
+			d.active = 0.1f;
+			d.recovery = 0.5f; // reload
+			d.damage = 35.0f;
+			d.chargeMax = 0.6f;
+			d.chargeDamageMul = 0.8f;
+			break;
 		case kItemSword:
 		default:
 			break; // the Lua-tuned sword

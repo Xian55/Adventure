@@ -23,6 +23,7 @@ namespace adventure
 		kItemSword = 4,
 		kItemDagger = 5,
 		kItemMace = 6,
+		kItemCrossbow = 7,
 	};
 
 	struct ItemDef

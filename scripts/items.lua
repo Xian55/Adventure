@@ -7,6 +7,7 @@ items = {
 	sword         = { name = "Sword",         stack = 1,   value = 25 }, -- value = base damage (display)
 	dagger        = { name = "Dagger",        stack = 1,   value = 15 },
 	mace          = { name = "Mace",          stack = 1,   value = 40 },
+	crossbow      = { name = "Crossbow",      stack = 1,   value = 35 },
 }
 
 print(string.format("items loaded: potion heals %d, mace dmg %d", items.health_potion.value, items.mace.value))

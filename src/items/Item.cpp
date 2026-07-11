@@ -12,6 +12,7 @@ namespace adventure
 		    {kItemSword, "Sword", ItemKind::Weapon, 1, 25.0f},
 		    {kItemDagger, "Dagger", ItemKind::Weapon, 1, 15.0f},
 		    {kItemMace, "Mace", ItemKind::Weapon, 1, 40.0f},
+		    {kItemCrossbow, "Crossbow", ItemKind::Weapon, 1, 35.0f},
 		};
 	} // namespace
 
