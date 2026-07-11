@@ -12,11 +12,13 @@
 #include "items/Container.h"
 #include "items/Inventory.h"
 #include "items/Pickup.h"
+#include "mech/Mechanisms.h"
 #include "lua/ScriptEngine.h"
 #include "player/JumpMeter.h"
 #include "player/PlayerController.h"
 #include "render/MetricsOverlay.h"
 #include "render/Billboard.h"
+#include "render/Mech.h"
 #include "render/Prop.h"
 #include "render/Renderer.h"
 #include "render/Viewmodel.h"
@@ -122,6 +124,9 @@ int main()
 	std::vector<Destructible> props;
 	std::vector<Pickup> pickups;
 	std::vector<Container> containers;
+	std::vector<Door> doors;
+	std::vector<Lever> levers;
+	std::vector<Plate> plates;
 	Inventory inventory;
 	PropTuning propTune;
 	Player player;
@@ -184,6 +189,9 @@ int main()
 		props.clear();
 		pickups.clear();
 		containers.clear();
+		doors.clear();
+		levers.clear();
+		plates.clear();
 		inventory = Inventory{}; // fresh bag on (re)spawn
 		for (const world::Entity& ent : r.data.entities)
 		{
@@ -254,7 +262,44 @@ int main()
 			containers.push_back(c);
 		}
 
-		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies, %d props, %d chests", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size(), (int)props.size(), (int)containers.size());
+		// Mechanisms: doors (func_door), levers, pressure plates. Wired by target/targetname.
+		const float ms = config::kMapScale;
+		for (const world::Entity& ent : r.data.entities)
+		{
+			if (ent.classname == "func_door")
+			{
+				Door d;
+				d.targetname = ent.str("targetname");
+				d.lockId = (int)ent.number("lock", 0.0f);
+				d.locked = d.lockId > 0;
+				const Vector3 size = ent.vec3("size", Vector3{64, 12, 96}); // map dims: width(x) depth(y) height(z)
+				d.half = {size.x * ms * 0.5f, size.z * ms * 0.5f, size.y * ms * 0.5f};
+				const Vector3 mv = ent.vec3("move", Vector3{0, 0, size.z}); // map translation when open (default: up its height)
+				d.openMove = {mv.x * ms, mv.z * ms, -mv.y * ms};
+				d.position = world::mapToEngine(ent.vec3("origin"));
+				d.position.y += d.half.y; // origin at feet -> center
+				doors.push_back(d);
+			}
+			else if (ent.classname == "lever")
+			{
+				Lever l;
+				l.position = world::mapToEngine(ent.vec3("origin"));
+				l.target = ent.str("target");
+				levers.push_back(l);
+			}
+			else if (ent.classname == "func_plate" || ent.classname == "trigger_plate")
+			{
+				Plate p;
+				p.position = world::mapToEngine(ent.vec3("origin"));
+				const Vector3 size = ent.vec3("size", Vector3{64, 8, 64});
+				p.half = {size.x * ms * 0.5f, size.z * ms * 0.5f, size.y * ms * 0.5f};
+				p.position.y += p.half.y; // sit the pad on the floor
+				p.target = ent.str("target");
+				plates.push_back(p);
+			}
+		}
+
+		TraceLog(LOG_WARNING, "world: %d meshes, %d brushes, %d enemies, %d props, %d chests, %d doors", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size(), (int)props.size(), (int)containers.size(), (int)doors.size());
 	};
 
 	loadTuning();
@@ -329,9 +374,19 @@ int main()
 			kickCooldown = 0.7f;
 			kickAnim = kickAnimTime; // trigger the boot-kick animation
 		}
-		const int chestTarget = nearestContainer(containers, player.position, player.yaw, 2.2f); // E to open the nearest facing chest
-		if (IsKeyPressed(KEY_E) && chestTarget >= 0)
-			tryOpenContainer(containers[chestTarget], inventory, pickups);
+		// Use (E): the nearest facing lever, then door, then chest.
+		const int leverTarget = nearestLever(levers, player.position, player.yaw, 2.2f);
+		const int doorTarget = nearestDoor(doors, player.position, player.yaw, 2.2f);
+		const int chestTarget = nearestContainer(containers, player.position, player.yaw, 2.2f);
+		if (IsKeyPressed(KEY_E))
+		{
+			if (leverTarget >= 0)
+				levers[leverTarget].on = !levers[leverTarget].on;
+			else if (doorTarget >= 0)
+				useDoor(doors[doorTarget], inventory);
+			else if (chestTarget >= 0)
+				tryOpenContainer(containers[chestTarget], inventory, pickups);
+		}
 		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
 		{
 			if (melee.phase == MeleePhase::Idle)
@@ -387,6 +442,8 @@ int main()
 								solids.push_back(SolidBox{p.position, {p.radius, p.height * 0.5f, p.radius}});
 						for (const Container& c : containers)
 							solids.push_back(SolidBox{c.position, {c.radius, c.height * 0.5f, c.radius}});
+						for (const Door& dr : doors)
+							solids.push_back(doorSolid(dr));
 						collideActorBoxes(player.position, player.velocity, player.onGround, Vector3{tune.radius, tune.height * 0.5f, tune.radius}, solids);
 					}
 					jumpMeter.update(player, config::kFixedDt);
@@ -410,6 +467,19 @@ int main()
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);
 				collectPickups(pickups, player.position, inventory, player.health, player.maxHealth, propTune.pickupRadius);
+				{ // mechanisms: plate weight (actors/props) -> activate linked doors -> animate
+					std::vector<Vector3> occupants;
+					occupants.push_back(Vector3{player.position.x, player.position.y - tune.height * 0.5f, player.position.z});
+					for (const Enemy& en : enemies)
+						if (en.active)
+							occupants.push_back(Vector3{en.position.x, en.position.y - en.height * 0.5f, en.position.z});
+					for (const Destructible& pr : props)
+						if (pr.active && !pr.broken)
+							occupants.push_back(Vector3{pr.position.x, pr.position.y - pr.height * 0.5f, pr.position.z});
+					updatePlates(plates, occupants);
+					applyActivations(doors, levers, plates);
+					updateDoors(doors, config::kFixedDt);
+				}
 				{
 					const Vector3 pf = {player.position.x, player.position.y - tune.height * 0.5f, player.position.z};
 					player.health -= world::hazardDamageAt(hazards, pf) * config::kFixedDt; // stand in it, take damage
@@ -469,6 +539,9 @@ int main()
 			}
 			enemyBillboards.draw(cam, enemies); // RenderKind::Billboard, depth-sorted + state-tinted
 			drawContainers(containers);
+			drawDoors(doors);
+			drawLevers(levers);
+			drawPlates(plates);
 			drawProps(props, (float)GetTime());
 			drawPickups(pickups, (float)GetTime());
 			EndMode3D();
@@ -512,11 +585,21 @@ int main()
 			if (rage.berserk)
 				DrawText("BERSERK", hx + hw + 10, ry - 3, 20, Color{255, 170, 40, 255});
 			DrawText(TextFormat("Coins %d    Keys %d    Potions %d", itemCount(inventory, kItemCoin), itemCount(inventory, kItemKey), itemCount(inventory, kItemHealthPotion)), hx, ry - 30, 20, Color{230, 220, 185, 255});
-			if (chestTarget >= 0) // "use" prompt for the chest you're facing
+			if (leverTarget >= 0 || doorTarget >= 0 || chestTarget >= 0) // unified "use" prompt
 			{
-				const bool needKey = containers[chestTarget].locked && itemCount(inventory, kItemKey) == 0;
-				const char* msg = needKey ? "[E] Locked - need a key" : (containers[chestTarget].locked ? "[E] Unlock" : "[E] Open");
-				DrawText(msg, 520, 470, 24, needKey ? Color{230, 120, 110, 255} : Color{240, 235, 210, 255});
+				const char* msg = "[E] Pull lever";
+				bool warn = false;
+				if (leverTarget < 0 && doorTarget >= 0)
+				{
+					warn = doors[doorTarget].locked && itemCount(inventory, kItemKey) == 0;
+					msg = warn ? "[E] Locked - need a key" : (doors[doorTarget].locked ? "[E] Unlock door" : "[E] Open door");
+				}
+				else if (leverTarget < 0 && chestTarget >= 0)
+				{
+					warn = containers[chestTarget].locked && itemCount(inventory, kItemKey) == 0;
+					msg = warn ? "[E] Locked - need a key" : (containers[chestTarget].locked ? "[E] Unlock" : "[E] Open");
+				}
+				DrawText(msg, 520, 470, 24, warn ? Color{230, 120, 110, 255} : Color{240, 235, 210, 255});
 			}
 		}
 		if (showTelemetry)

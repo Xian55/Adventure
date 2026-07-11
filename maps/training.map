@@ -136,35 +136,69 @@
 ( -192 48 42 ) ( -192 128 42 ) ( 192 48 42 ) trigger [ 1 0 0 0 ] [ 0 1 0 0 ] 0 1 1
 }
 }
-// Destructible props: smash with melee, kick to shatter. The keg + loot="health" crate drop a health orb.
+// Props / chests / mechanisms — spread across the open floor behind spawn (turn around).
 {
 "classname" "prop_barrel"
-"origin" "-64 -64 0"
+"origin" "-300 -120 0"
 "loot" "key"
 }
 {
 "classname" "prop_barrel"
-"origin" "-32 -64 0"
+"origin" "-210 -120 0"
 }
 {
 "classname" "prop_crate"
-"origin" "48 -64 0"
+"origin" "210 -120 0"
 "loot" "health"
 }
 {
 "classname" "prop_keg"
-"origin" "16 -80 0"
+"origin" "300 -120 0"
 }
-// Chests: an open one with coins, and a locked one (needs the key from the barrel) with a potion + coins.
 {
 "classname" "prop_chest"
-"origin" "-90 -200 0"
+"origin" "-360 -260 0"
 "coins" "12"
 }
 {
 "classname" "prop_chest"
-"origin" "60 -200 0"
+"origin" "360 -260 0"
 "lock" "1"
 "coins" "8"
 "potions" "2"
+}
+// Lever-opened door.
+{
+"classname" "func_door"
+"targetname" "door1"
+"origin" "-120 -260 0"
+"size" "64 12 96"
+"move" "0 0 96"
+}
+{
+"classname" "lever"
+"origin" "-40 -260 0"
+"target" "door1"
+}
+// Pressure-plate door (flat pad: height is the last size value).
+{
+"classname" "func_door"
+"targetname" "door2"
+"origin" "120 -260 0"
+"size" "64 12 96"
+"move" "0 0 96"
+}
+{
+"classname" "func_plate"
+"origin" "120 -160 0"
+"size" "64 64 8"
+"target" "door2"
+}
+// Key-locked door (needs the barrel key).
+{
+"classname" "func_door"
+"origin" "0 -390 0"
+"lock" "1"
+"size" "64 12 96"
+"move" "0 0 96"
 }
