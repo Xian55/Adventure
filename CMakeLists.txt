@@ -47,6 +47,7 @@ set(ADVENTURE_LIB_SOURCES
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
     src/render/Viewmodel.cpp
+    src/render/Billboard.cpp
     src/lua/ScriptEngine.cpp
     src/lua/Bindings.cpp                 # the only TU that includes LuaBridge
 )
@@ -98,6 +99,7 @@ add_executable(adventure_tests
     tests/test_melee.cpp
     tests/test_combat.cpp
     tests/test_rage.cpp
+    tests/test_billboard.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

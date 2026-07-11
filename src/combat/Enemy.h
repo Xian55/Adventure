@@ -12,6 +12,13 @@ namespace adventure
 		Dead
 	};
 
+	// How an enemy is drawn — the swap seam: billboard sprite now, animated 3D model later (render-only change).
+	enum class RenderKind
+	{
+		Box,       // debug placeholder cube
+		Billboard, // Y-facing sprite (Doom look)
+	};
+
 	// One melee enemy (skeleton). Rendered as a placeholder box until sprites exist (RenderKind seam).
 	struct Enemy
 	{
@@ -24,6 +31,7 @@ namespace adventure
 		float stateTimer = 0.0f;
 		float radius = 0.4f;
 		float height = 1.8f;
+		RenderKind render = RenderKind::Billboard;
 		bool active = true; // false once despawned
 	};
 } // namespace adventure

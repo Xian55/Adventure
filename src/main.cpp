@@ -11,6 +11,7 @@
 #include "player/JumpMeter.h"
 #include "player/PlayerController.h"
 #include "render/MetricsOverlay.h"
+#include "render/Billboard.h"
 #include "render/Renderer.h"
 #include "render/Viewmodel.h"
 #include "render/WorldRenderer.h"
@@ -40,6 +41,9 @@ int main()
 
 	Renderer renderer;
 	renderer.init(config::kWindowW, config::kWindowH, config::kLowW, config::kLowH);
+
+	EnemyBillboards enemyBillboards;
+	enemyBillboards.init();
 
 	Metrics& metrics = Metrics::instance();
 	const Color fog = Color{26, 28, 40, 255};
@@ -150,6 +154,19 @@ int main()
 				enemies.push_back(e);
 			}
 		}
+		// Drop each enemy onto the floor: spawn origins can sit above it, and enemies have no gravity yet.
+		for (Enemy& e : enemies)
+		{
+			const Vector3 he = {e.radius, e.height * 0.5f, e.radius};
+			float y = e.position.y + 1.0f;
+			const float lo = y - 8.0f;
+			while (y > lo && !collision.overlaps(Vector3{e.position.x, y, e.position.z}, he)) // descend to first contact
+				y -= 0.05f;
+			while (collision.overlaps(Vector3{e.position.x, y, e.position.z}, he)) // lift back out of the floor
+				y += 0.02f;
+			e.position.y = y;
+		}
+
 		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size());
 	};
 
@@ -190,7 +207,10 @@ int main()
 		if (IsKeyPressed(KEY_F6))
 			loadMap(mapPath); // hot-reload level
 		if (IsKeyPressed(KEY_V))
-			noclip = !noclip; // free-fly / level inspection
+			noclip = !noclip;    // free-fly / level inspection
+		if (IsKeyPressed(KEY_B)) // toggle enemy render kind (debug the seam)
+			for (Enemy& e : enemies)
+				e.render = e.render == RenderKind::Billboard ? RenderKind::Box : RenderKind::Billboard;
 		// Attack: hold LMB to wind up, the held movement key picks the direction, release to strike.
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 			beginCharge(melee);
@@ -308,7 +328,7 @@ int main()
 			world.draw(cam.position);
 			for (const Enemy& e : enemies)
 			{
-				if (!e.active)
+				if (!e.active || e.render != RenderKind::Box) // billboards handled below
 					continue;
 				Color c = e.state == EnemyState::Dead      ? Color{95, 75, 72, 255}
 				          : e.state == EnemyState::Stagger ? Color{225, 120, 110, 255}
@@ -319,6 +339,7 @@ int main()
 				DrawCube(box, e.radius * 2.0f, bh, e.radius * 2.0f, c);
 				DrawCubeWires(box, e.radius * 2.0f, bh, e.radius * 2.0f, Color{40, 40, 45, 255});
 			}
+			enemyBillboards.draw(cam, enemies); // RenderKind::Billboard, depth-sorted + state-tinted
 			EndMode3D();
 			if (!noclip)
 			{
@@ -419,6 +440,7 @@ int main()
 	}
 
 	world.unload();
+	enemyBillboards.shutdown();
 	renderer.shutdown();
 	sScript->shutdown();
 	CloseWindow();
