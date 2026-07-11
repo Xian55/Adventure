@@ -10,6 +10,7 @@
 #include "combat/Melee.h"
 #include "combat/Projectile.h"
 #include "combat/Rage.h"
+#include "combat/Spell.h"
 #include "input/InputMap.h"
 #include "input/InputQuery.h"
 #include "items/Collide.h"
@@ -198,6 +199,10 @@ int main()
 		skillTune.damagePerRank = (float)sScript->evalNumber("skills.effects.damagePerRank", skillTune.damagePerRank);
 		skillTune.rageBonus = (float)sScript->evalNumber("skills.effects.rageBonus", skillTune.rageBonus);
 		skillTune.speedPerRank = (float)sScript->evalNumber("skills.effects.speedPerRank", skillTune.speedPerRank);
+
+		// Spell data from scripts/spells.lua (the spell set + effects stay in C++).
+		sScript->runFile("scripts/spells.lua");
+		setSpellDef(SPELL_PUSH, (float)sScript->evalNumber("spells.telekinesis.mana", spellDef(SPELL_PUSH).manaCost), (float)sScript->evalNumber("spells.telekinesis.power", spellDef(SPELL_PUSH).power), (float)sScript->evalNumber("spells.telekinesis.range", spellDef(SPELL_PUSH).range));
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -217,6 +222,7 @@ int main()
 	Inventory inventory;
 	PropTuning propTune;
 	SkillState skills; // persists across respawn (not reset in loadMap)
+	Mana mana;
 	Player player;
 	std::vector<Enemy> enemies;
 	auto loadMap = [&](const char* path) {
@@ -239,6 +245,7 @@ int main()
 		player.maxHealth = 100.0f + deriveStats(skills, skillTune).maxHealthBonus; // Toughness raises the cap
 		player.health = player.maxHealth;                                          // fresh spawn / respawn
 		rage = RageState{};                                                        // lose the meter on death
+		mana = Mana{};                                                             // full mana on (re)spawn
 
 		// Spawn skeletons from monster_skeleton entities; if the map has none, drop a few in front so the
 		// combat slice always has targets.
@@ -514,6 +521,11 @@ int main()
 			kickCooldown = 0.7f;
 			kickAnim = kickAnimTime; // trigger the boot-kick animation
 		}
+		if (actionPressed(keys, Action::Cast) && !showSkills) // Telekinesis: ranged force-push (into hazards)
+		{
+			const Vector3 eye = {player.position.x, player.position.y + tune.eyeHeight - tune.height * 0.5f, player.position.z};
+			castPush(mana, spellDef(SPELL_PUSH), eye, player.yaw, enemies, enemyTune);
+		}
 		if (actionPressed(keys, Action::NextWeapon)) // cycle the weapons you hold
 		{
 			const int n = nextWeapon(inventory, equippedItem);
@@ -630,6 +642,7 @@ int main()
 						resolveActorContainers(e.position, e.radius, e.height, containers);
 					}
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
+				updateMana(mana, config::kFixedDt);
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);
 				updateProjectiles(bolts, 2.0f, config::kFixedDt); // fast + nearly flat (small drop)
@@ -777,6 +790,13 @@ int main()
 			DrawText(TextFormat("%d / %d", (int)fmaxf(0.0f, player.health), (int)player.maxHealth), hx + hw + 10, hy, 20, RAYWHITE);
 			if (actionDown(keys, Action::Block))
 				DrawText("BLOCK", hx + hw + 120, hy, 20, Color{150, 190, 230, 255});
+			{ // mana bar (below health) — Telekinesis cast
+				const float mf = mana.max > 0.01f ? mana.cur / mana.max : 0.0f;
+				const int my = hy + hh + 4;
+				DrawRectangle(hx - 2, my - 2, hw + 4, 12 + 4, Color{20, 15, 15, 220});
+				DrawRectangle(hx, my, (int)(hw * mf), 12, Color{60, 110, 210, 255});
+				DrawText(TextFormat("Mana %d   [%s]", (int)mana.cur, codeName(actionCode(keys, Action::Cast)).c_str()), hx + hw + 10, my - 2, 18, Color{130, 170, 235, 255});
+			}
 			const int ry = hy - 22;
 			const float rf = rageFraction(rage, rageTune);
 			DrawRectangle(hx - 2, ry - 2, hw + 4, 14 + 4, Color{20, 15, 15, 220});

@@ -18,6 +18,7 @@ namespace adventure
 			K_A = 65,
 			K_Q = 81,
 			K_K = 75,
+			K_R = 82,
 			K_LSHIFT = 340,
 			K_LCTRL = 341,
 		};
@@ -36,6 +37,7 @@ namespace adventure
 		    "Interact",
 		    "NextWeapon",
 		    "SkillMenu",
+		    "Cast",
 		};
 	} // namespace
 
@@ -55,6 +57,7 @@ namespace adventure
 		m.codes[(int)Action::Interact] = K_E;
 		m.codes[(int)Action::NextWeapon] = K_Q;
 		m.codes[(int)Action::SkillMenu] = K_K;
+		m.codes[(int)Action::Cast] = K_R; // cast the equipped spell (Telekinesis)
 		return m;
 	}
 
