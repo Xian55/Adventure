@@ -57,4 +57,9 @@ namespace adventure
 
 	// Collect any pickup the player is standing on (heal, clamped to maxHealth). Pure.
 	void collectPickups(std::vector<Pickup>& pickups, Vector3 playerPos, float& playerHealth, float maxHealth, const PropTuning& t);
+
+	// Push an actor (vertical cylinder, `radius`/`height` about center `pos`) horizontally out of every intact
+	// prop it overlaps, so props block movement. Broken/inactive props don't collide. Pure. Linear over props
+	// (a broadphase is a later optimization). `pos` is updated in place.
+	void resolveActorProps(Vector3& pos, float radius, float height, const std::vector<Destructible>& props);
 } // namespace adventure

@@ -1,4 +1,5 @@
 #pragma once
+#include "combat/Destructible.h"
 #include "combat/Enemy.h"
 #include "combat/Melee.h"
 #include "world/MapTypes.h"
@@ -44,8 +45,9 @@ namespace adventure
 	};
 
 	// If the player's melee hitbox is live (and this swing hasn't hit yet), damage every enemy inside the
-	// reach + arc: apply damage (× damageMul), knock them back, stagger (or kill). One resolution per swing.
-	MeleeHitResult resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t, float damageMul = 1.0f);
+	// reach + arc: apply damage (× damageMul), knock them back, stagger (or kill). Destructible props in the
+	// same arc are smashed too (pass props+pickups+propTune, else null). One resolution per swing.
+	MeleeHitResult resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t, float damageMul = 1.0f, std::vector<Destructible>* props = nullptr, std::vector<Pickup>* pickups = nullptr, const PropTuning* propTune = nullptr);
 
 	// Kick: shove every enemy in a short forward cone hard (impulse velocity) and stagger them — the
 	// Dark Messiah environmental-kill move (knock into hazards/off ledges). Cooldown is caller-managed.

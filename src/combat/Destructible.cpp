@@ -67,4 +67,34 @@ namespace adventure
 			pk.active = false;
 		}
 	}
+
+	void resolveActorProps(Vector3& pos, float radius, float height, const std::vector<Destructible>& props)
+	{
+		for (const Destructible& p : props)
+		{
+			if (!p.active || p.broken)
+				continue;
+			// Vertical bands must overlap for a horizontal block (step over/under otherwise).
+			if (pos.y - height * 0.5f >= p.position.y + p.height * 0.5f || pos.y + height * 0.5f <= p.position.y - p.height * 0.5f)
+				continue;
+
+			const float dx = pos.x - p.position.x;
+			const float dz = pos.z - p.position.z;
+			const float minD = radius + p.radius;
+			const float d = std::sqrt(dx * dx + dz * dz);
+			if (d >= minD)
+				continue;
+
+			if (d > 0.0001f)
+			{
+				const float push = minD - d;
+				pos.x += (dx / d) * push;
+				pos.z += (dz / d) * push;
+			}
+			else
+			{
+				pos.x += minD; // dead-centre: shove out along +x
+			}
+		}
+	}
 } // namespace adventure

@@ -107,6 +107,31 @@ TEST_CASE("no hit outside the Active phase")
 	CHECK(es[0].health == doctest::Approx(50.0));
 }
 
+TEST_CASE("the same swing that hits enemies also smashes a prop in its arc")
+{
+	EnemyTuning t;
+	PropTuning pt;
+	std::vector<Enemy> es; // no enemies present
+	std::vector<Destructible> props(1);
+	props[0].position = {0, 0.5f, -1.0f}; // 1 unit in front (yaw 0 => -Z)
+	props[0].health = props[0].maxHealth = 20.0f;
+	std::vector<Pickup> loot;
+	MeleeState m = activeSwing();
+	resolveMeleeHits(m, wpn(), Vector3{0, 0, 0}, 0.0f, es, t, 1.0f, &props, &loot, &pt);
+	CHECK(props[0].health == doctest::Approx(20.0 - 25.0)); // wpn damage 25 applied
+	CHECK(props[0].broken);
+	CHECK(m.hitThisSwing);
+
+	// A prop behind the player is untouched.
+	std::vector<Destructible> behind(1);
+	behind[0].position = {0, 0.5f, 1.0f};
+	behind[0].health = behind[0].maxHealth = 20.0f;
+	MeleeState m2 = activeSwing();
+	resolveMeleeHits(m2, wpn(), Vector3{0, 0, 0}, 0.0f, es, t, 1.0f, &behind, &loot, &pt);
+	CHECK(behind[0].health == doctest::Approx(20.0));
+	CHECK_FALSE(behind[0].broken);
+}
+
 TEST_CASE("kick shoves front enemies back and staggers them; misses those behind")
 {
 	EnemyTuning t;

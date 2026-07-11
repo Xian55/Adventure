@@ -329,25 +329,21 @@ int main()
 				else
 				{
 					updatePlayer(player, in, collision, tune, config::kFixedDt);
+					resolveActorProps(player.position, tune.radius, tune.height, props); // props block the player
 					jumpMeter.update(player, config::kFixedDt);
 				}
-				const MeleePhase prevMeleePhase = melee.phase;
-				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune)); // berserk swings faster
-				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune));
-				addRage(rage, rageTune, hitResult.hits, hitResult.kills);                      // landed melee builds rage
-				if (melee.phase == MeleePhase::Active && prevMeleePhase != MeleePhase::Active) // swing just went live -> smash props in front
-				{
-					const Vector3 fwd = {sinf(player.yaw), 0.0f, -cosf(player.yaw)};
-					const Vector3 hit = {player.position.x + fwd.x * weapon.reach * 0.6f, player.position.y, player.position.z + fwd.z * weapon.reach * 0.6f};
-					const float dmg = weapon.damage * (1.0f + chargeFraction(melee, weapon) * weapon.chargeDamageMul) * rageDamageMul(rage, rageTune);
-					damageProps(props, pickups, hit, weapon.reach * 0.55f, dmg, propTune);
-				}
+				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune));                                                                                                   // berserk swings faster
+				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune), &props, &pickups, &propTune); // hits enemies + smashes props
+				addRage(rage, rageTune, hitResult.hits, hitResult.kills);                                                                                                                      // landed melee builds rage
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
 				tgt.shieldRaised = IsMouseButtonDown(MOUSE_BUTTON_RIGHT); // hold RMB to block
 				tgt.health = &player.health;
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
+				for (Enemy& e : enemies) // props block enemies too (corner them behind a barrel)
+					if (e.active && e.state != EnemyState::Dead)
+						resolveActorProps(e.position, e.radius, e.height, props);
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);

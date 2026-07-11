@@ -87,7 +87,7 @@ namespace adventure
 		}
 	}
 
-	MeleeHitResult resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t, float damageMul)
+	MeleeHitResult resolveMeleeHits(MeleeState& melee, const WeaponDef& weapon, Vector3 playerPos, float playerYaw, std::vector<Enemy>& enemies, const EnemyTuning& t, float damageMul, std::vector<Destructible>* props, std::vector<Pickup>* pickups, const PropTuning* propTune)
 	{
 		MeleeHitResult result;
 		if (!hitboxActive(melee) || melee.hitThisSwing)
@@ -137,7 +137,34 @@ namespace adventure
 			++result.hits;
 		}
 
-		if (result.hits > 0)
+		bool propHit = false;
+		if (props && pickups && propTune) // the same swing smashes props in its arc
+		{
+			for (Destructible& p : *props)
+			{
+				if (!p.active || p.broken)
+					continue;
+				const float tx = p.position.x - playerPos.x;
+				const float tz = p.position.z - playerPos.z;
+				const float d = std::sqrt(tx * tx + tz * tz);
+				if (d > weapon.reach + p.radius)
+					continue;
+				if (d > 0.0001f && (fx * tx + fz * tz) / d < cosHalf)
+					continue;
+
+				p.health -= dmg;
+				propHit = true;
+				if (p.health <= 0.0f)
+				{
+					p.broken = true;
+					p.breakTimer = propTune->debrisTime;
+					if (p.loot != LootKind::None)
+						pickups->push_back(Pickup{p.position, p.loot, true});
+				}
+			}
+		}
+
+		if (result.hits > 0 || propHit)
 			melee.hitThisSwing = true; // this swing has connected; don't hit again
 		return result;
 	}

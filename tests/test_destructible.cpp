@@ -1,6 +1,8 @@
 #include <doctest/doctest.h>
 #include "combat/Destructible.h"
 
+#include <cmath>
+
 using namespace adventure;
 
 namespace
@@ -94,4 +96,44 @@ TEST_CASE("a distant pickup is not collected")
 	collectPickups(pickups, Vector3{5, 0.5f, 0}, hp, 100.0f, t);
 	CHECK(hp == doctest::Approx(50.0));
 	CHECK(pickups[0].active);
+}
+
+TEST_CASE("an intact prop blocks an actor, pushing it out to the surface")
+{
+	std::vector<Destructible> props(1);
+	props[0].position = {0, 0.5f, 0};
+	props[0].radius = 0.4f;
+	props[0].height = 1.0f;
+
+	Vector3 pos = {0.5f, 0.9f, 0.0f}; // overlapping (0.5 < radius 0.3 + 0.4 = 0.7)
+	resolveActorProps(pos, 0.3f, 1.8f, props);
+	const float d = std::sqrt(pos.x * pos.x + pos.z * pos.z);
+	CHECK(d == doctest::Approx(0.7).epsilon(0.01)); // pushed to exactly radius sum
+	CHECK(pos.z == doctest::Approx(0.0));           // shoved straight out along the approach axis
+}
+
+TEST_CASE("a clear, broken, or vertically-disjoint prop does not block")
+{
+	std::vector<Destructible> props(1);
+	props[0].position = {0, 0.5f, 0};
+	props[0].radius = 0.4f;
+	props[0].height = 1.0f;
+
+	{
+		Vector3 pos = {2.0f, 0.9f, 0.0f}; // far away
+		resolveActorProps(pos, 0.3f, 1.8f, props);
+		CHECK(pos.x == doctest::Approx(2.0));
+	}
+	{
+		props[0].broken = true;
+		Vector3 pos = {0.5f, 0.9f, 0.0f}; // overlapping but the prop is rubble
+		resolveActorProps(pos, 0.3f, 1.8f, props);
+		CHECK(pos.x == doctest::Approx(0.5));
+		props[0].broken = false;
+	}
+	{
+		Vector3 pos = {0.5f, 5.0f, 0.0f}; // standing on a ledge above the prop
+		resolveActorProps(pos, 0.3f, 1.8f, props);
+		CHECK(pos.x == doctest::Approx(0.5));
+	}
 }

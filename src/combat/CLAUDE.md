@@ -8,7 +8,7 @@ Combat rules. Pure logic (no raylib) -> headless-testable. Numbers live in Lua; 
 | `Enemy.h` | `Enemy` struct (pos/vel/health/`EnemyState` Approach/**Windup**/**Recover**/Stagger/Dead/timer/dims + `RenderKind`) — a skeleton. Drawn as a Y-facing **billboard** sprite (`render/Billboard`); `RenderKind::Box` is the debug cube (toggle **B**). |
 | `CombatSystem.{h,cpp}` | `updateEnemies` (approach AI → **Windup telegraph → strike the player** (reduced by a facing shield) → Recover; knockback integration; stagger/death timers; writes `PlayerTarget.health`), `resolveMeleeHits` (Active hitbox vs enemies in reach+arc → damage×`damageMul`/knockback/stagger/kill, one hit per swing; returns `MeleeHitResult{hits,kills}` to feed rage), `tryKick` (shove enemies in a forward cone hard + stagger — environmental-kill move; also interrupts a windup), `applyHazards` (damage enemies whose feet are in a `world::Hazard` volume → kick them into lava for the kill). `EnemyTuning` (approach/attack/block numbers), `PlayerTarget` (what an enemy needs to hit back). |
 | `Rage.{h,cpp}` | Rage → berserk meter (DM combat resource). `addRage` (landed melee/kills build it; maxing flips to berserk), `updateRage` (drain over the berserk window, else bleed after a grace delay), `rageDamageMul`/`rageSpeedMul` (berserk buffs), `rageFraction` (HUD). Pure/tested. `RageTuning` from Lua. |
-| `Destructible.{h,cpp}` | Smashable props (`PropKind` Barrel/Crate/Keg) with health + optional `LootKind`. `damageProps` (melee/kick/blast in a radius → break → spawn a `Pickup`), `updateProps` (debris timer → despawn), `collectPickups` (player over a pickup heals, clamped). Pure/tested. Non-solid for now. Drawn by `render/Prop`. |
+| `Destructible.{h,cpp}` | Smashable props (`PropKind` Barrel/Crate/Keg) with health + optional `LootKind`. `damageProps` (kick/blast in a radius → break → spawn a `Pickup`), `updateProps` (debris timer → despawn), `collectPickups` (player over a pickup heals, clamped), `resolveActorProps` (push an actor cylinder out of intact props → props block movement). Pure/tested. Drawn by `render/Prop`. |
 
 ## Flow
 - Input buffers a swing (`requestSwing`, on attack press). `updateMelee` runs each **fixed step** (in
@@ -40,11 +40,14 @@ into `resolveMeleeHits(..., damageMul)` and the swing-speed dt. Numbers in `tuni
 
 ## Destructibles & loot (M2)
 `Destructible.{h,cpp}` + `render/Prop`. Props spawn from `prop_barrel`/`prop_crate`/`prop_keg` map entities
-(ground-snapped like enemies). Melee smashes them on the frame a swing goes Active (a forward-cone
-`damageProps` — separate from enemy hit resolution, so it isn't gated by the enemy `hitThisSwing`); kick
-shatters outright. A keg or a `loot="health"` prop drops a `Pickup` (health orb) on break; the player heals
-by walking over it. `PropTuning` numbers are C++ defaults for now (Lua-tunable later).
+(ground-snapped like enemies). **Melee smashes them inside `resolveMeleeHits`** — the same swing that hits
+enemies damages props in its arc, sharing the one-per-swing `hitThisSwing` debounce. (Earlier the prop hit was
+gated on a Charge→Active transition detected in the fixed loop, but that transition happens in `releaseSwing`
+in the input pass, so the sword never damaged props — fixed by folding it into `resolveMeleeHits`.) Kick
+shatters outright via `damageProps`. A keg or a `loot="health"` prop drops a `Pickup` (health orb) on break;
+the player heals by walking over it. Intact props **block** the player and enemies (`resolveActorProps`,
+run after `updatePlayer`/`updateEnemies`); broken rubble is walk-through. `PropTuning` = C++ defaults for now.
 
 ## Coming
-Player + enemies move into the ECS as components. Prop-vs-actor collision (props are walk-through now).
-More loot kinds + a real inventory (M3). Real sprite/model art.
+Player + enemies move into the ECS as components. Prop-collision broadphase when prop counts grow (linear
+now). More loot kinds + a real inventory (M3). Real sprite/model art.
