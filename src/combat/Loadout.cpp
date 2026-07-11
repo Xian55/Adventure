@@ -12,7 +12,7 @@ namespace adventure
 
 	const char* weaponName(int itemId)
 	{
-		return itemDef(itemId).name;
+		return itemDef(itemId).name.c_str();
 	}
 
 	WeaponDef weaponDefFor(int itemId, const WeaponDef& swordDef)

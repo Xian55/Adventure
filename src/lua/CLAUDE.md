@@ -4,7 +4,7 @@ Sandboxed Lua scripting. VM = vendored minilua (Lua 5.5); binding = LuaBridge3.
 
 | File | Responsibility |
 |------|----------------|
-| `ScriptEngine.{h,cpp}` | Public API behind a pimpl (`sScript`): `init/runString/runFile/selfTest/luaMemoryBytes`. Core (state, sandbox, watchdog, chunk loading) via the **raw Lua C API** — no LuaBridge here. |
+| `ScriptEngine.{h,cpp}` | Public API behind a pimpl (`sScript`): `init/runString/runFile/selfTest/luaMemoryBytes`, `evalNumber`/`evalString` (evaluate `return (expr)` under the sandbox → number/string, else the default). Core (state, sandbox, watchdog, chunk loading) via the **raw Lua C API** — no LuaBridge here. |
 | `ScriptEngineImpl.h` | Internal state struct (`lua_State`, watchdog counters, sandbox ref). Shared by the two `.cpp`; not public. |
 | `Bindings.cpp` | **The only TU that includes LuaBridge.h** (big-obj, exceptions off). Registers the host API (`bindHostApi`). Add C++↔Lua gameplay bindings here. |
 

@@ -50,6 +50,17 @@ TEST_CASE("removing more than held fails without changing anything")
 	CHECK_FALSE(removeItem(inv, kItemKey, 1)); // none held
 }
 
+TEST_CASE("setItemDef overrides name/stack/value but keeps kind")
+{
+	const ItemKind kindBefore = itemDef(kItemCoin).kind;
+	setItemDef(kItemCoin, "Gold Piece", 500, 2.0f);
+	CHECK(itemDef(kItemCoin).name == "Gold Piece");
+	CHECK(itemDef(kItemCoin).maxStack == 500);
+	CHECK(itemDef(kItemCoin).value == doctest::Approx(2.0));
+	CHECK(itemDef(kItemCoin).kind == kindBefore); // kind is fixed in code
+	setItemDef(kItemCoin, "Coin", 999, 1.0f);     // restore for other tests
+}
+
 TEST_CASE("adding nothing / unknown is a no-op")
 {
 	Inventory inv;

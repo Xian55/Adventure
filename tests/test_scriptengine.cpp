@@ -61,3 +61,15 @@ TEST_CASE("evalNumber evaluates expressions and falls back on error")
 	REQUIRE(sScript->runString("t", "tuning = { moveSpeed = 8.5 }"));
 	CHECK(sScript->evalNumber("tuning.moveSpeed", 0.0) == doctest::Approx(8.5));
 }
+
+TEST_CASE("evalString reads strings and falls back on error/non-string")
+{
+	sScript->init();
+	CHECK(sScript->evalString("'hello'", "def") == "hello");
+	CHECK(sScript->evalString("'a' .. 'b'", "def") == "ab");
+	CHECK(sScript->evalString("123", "def") == "def");            // number -> def
+	CHECK(sScript->evalString("nosuchglobal.x", "def") == "def"); // index nil -> def
+
+	REQUIRE(sScript->runString("t", "items = { sword = { name = 'Longsword' } }"));
+	CHECK(sScript->evalString("items.sword.name", "?") == "Longsword");
+}

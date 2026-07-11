@@ -5,7 +5,7 @@ not presentation (pickups are *drawn* by `render/Prop`).
 
 | File | Responsibility |
 |------|----------------|
-| `Item.{h,cpp}` | The item **set** + kinds. `ItemKind` (Consumable/Coin/Key/Weapon), `ItemId` constants, `ItemDef` (name/kind/maxStack/value), `itemDef(id)` lookup. The definitions are a C++ table **for now** — moving them to Lua needs a table-read binding (see Coming). |
+| `Item.{h,cpp}` | The item **set** + kinds. `ItemKind` (Consumable/Coin/Key/Weapon), `ItemId` constants, `ItemDef` (name/kind/maxStack/value), `itemDef(id)` lookup, `setItemDef(id,name,maxStack,value)`. Numbers + names come from **`scripts/items.lua`** (loaded by `main` via `evalString`/`evalNumber`, hot-reload F5); the id + kind stay in C++ (code branches on kind). |
 | `Inventory.{h,cpp}` | Slot-based bag: `ItemStack`s up to each item's `maxStack`, bounded by `capacity`. `addItem` (tops up existing stacks, then opens slots; returns amount taken), `removeItem`, `itemCount`. Pure/tested. |
 | `Pickup.{h,cpp}` | `Pickup` = a floating item in the world (`itemId` + `count` + position). `collectPickups` = player over one → a **Consumable is used on the spot** (heal × count, clamped); anything else goes to the `Inventory` (a full bag leaves the remainder). Pure/tested. |
 | `Container.{h,cpp}` | Chests: `Container` (contents + optional lock). `tryOpenContainer` (locked → spends a key from the inventory; opening spills contents as pickups), `nearestContainer` (closest facing chest in range for the "use" prompt), `resolveActorContainers` (chests block enemies horizontally). Pure/tested. |

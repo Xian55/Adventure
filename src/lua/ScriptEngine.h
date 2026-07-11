@@ -28,6 +28,9 @@ namespace adventure
 		// Evaluate `return (expr)` in the sandbox; return the number, or def on error/non-number.
 		double evalNumber(const std::string& expr, double def);
 
+		// Evaluate `return (expr)` in the sandbox; return the string, or def on error/non-string.
+		std::string evalString(const std::string& expr, const std::string& def);
+
 		// Boot proof: asserts dangerous libs (io/os.execute/require/load/dofile/debug/package)
 		// are absent from the sandbox and that the watchdog kills an infinite loop.
 		void selfTest();

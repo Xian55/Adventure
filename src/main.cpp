@@ -117,6 +117,29 @@ int main()
 		kickReach = (float)sScript->evalNumber("tuning.kickReach", kickReach);
 		kickImpulse = (float)sScript->evalNumber("tuning.kickImpulse", kickImpulse);
 
+		// Item defs (name + numbers) from scripts/items.lua; the id + kind stay in C++.
+		sScript->runFile("scripts/items.lua");
+		const struct
+		{
+			int id;
+			const char* key;
+		} itemRows[] = {
+		    {kItemHealthPotion, "items.health_potion"},
+		    {kItemCoin, "items.coin"},
+		    {kItemKey, "items.key"},
+		    {kItemSword, "items.sword"},
+		    {kItemDagger, "items.dagger"},
+		    {kItemMace, "items.mace"},
+		};
+		for (const auto& row : itemRows)
+		{
+			const ItemDef& cur = itemDef(row.id);
+			const std::string name = sScript->evalString(std::string(row.key) + ".name", cur.name);
+			const int stack = (int)sScript->evalNumber(std::string(row.key) + ".stack", cur.maxStack);
+			const float value = (float)sScript->evalNumber(std::string(row.key) + ".value", cur.value);
+			setItemDef(row.id, name, stack, value);
+		}
+
 		enemyTune.blockArc = (float)sScript->evalNumber("tuning.blockArc", enemyTune.blockArc);
 		enemyTune.blockReduction = (float)sScript->evalNumber("tuning.blockReduction", enemyTune.blockReduction);
 		enemyTune.moveSpeed = (float)sScript->evalNumber("tuning.enemyMoveSpeed", enemyTune.moveSpeed);

@@ -1,7 +1,8 @@
 #pragma once
+#include <string>
 
-// Item definitions. The item *set* + kinds live here (C++); tunable numbers move to Lua later (needs a
-// table-read binding — for now they're constants). Inventory logic is pure -> headless-testable.
+// Item definitions. The item *set* + kinds live in C++ (code branches on kind); names + numbers (maxStack,
+// value) are overridable from scripts/items.lua via setItemDef. Inventory logic is pure -> headless-testable.
 namespace adventure
 {
 	enum class ItemKind
@@ -27,12 +28,16 @@ namespace adventure
 	struct ItemDef
 	{
 		int id = kItemNone;
-		const char* name = "None";
+		std::string name = "None";
 		ItemKind kind = ItemKind::Coin;
 		int maxStack = 1;
-		float value = 0.0f; // Consumable: heal amount; Coin: worth; Weapon: damage (future)
+		float value = 0.0f; // Consumable: heal amount; Coin: worth; Weapon: damage
 	};
 
 	// Definition for an id (returns the None def for unknown ids).
 	const ItemDef& itemDef(int id);
+
+	// Override the data fields for an id (name/maxStack/value) — kind stays fixed in code. Used by `main`
+	// to apply scripts/items.lua. Unknown ids are ignored.
+	void setItemDef(int id, const std::string& name, int maxStack, float value);
 } // namespace adventure
