@@ -16,6 +16,7 @@ namespace adventure
 			K_S = 83,
 			K_W = 87,
 			K_A = 65,
+			K_Q = 81,
 			K_LSHIFT = 340,
 			K_LCTRL = 341,
 		};
@@ -32,6 +33,7 @@ namespace adventure
 		    "Block",
 		    "Kick",
 		    "Interact",
+		    "NextWeapon",
 		};
 	} // namespace
 
@@ -49,6 +51,7 @@ namespace adventure
 		m.codes[(int)Action::Block] = mouseCode(1);  // right mouse
 		m.codes[(int)Action::Kick] = K_F;
 		m.codes[(int)Action::Interact] = K_E;
+		m.codes[(int)Action::NextWeapon] = K_Q;
 		return m;
 	}
 

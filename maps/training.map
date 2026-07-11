@@ -145,6 +145,7 @@
 {
 "classname" "prop_barrel"
 "origin" "-210 -120 0"
+"loot" "dagger"
 }
 {
 "classname" "prop_crate"
@@ -159,6 +160,7 @@
 "classname" "prop_chest"
 "origin" "-360 -260 0"
 "coins" "12"
+"weapon" "mace"
 }
 {
 "classname" "prop_chest"

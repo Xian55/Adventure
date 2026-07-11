@@ -19,6 +19,9 @@ namespace adventure
 		kItemHealthPotion = 1,
 		kItemCoin = 2,
 		kItemKey = 3,
+		kItemSword = 4,
+		kItemDagger = 5,
+		kItemMace = 6,
 	};
 
 	struct ItemDef

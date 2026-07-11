@@ -14,7 +14,7 @@ open, locked ones need a key; props/chests solid + standable), and **mechanisms*
 (`src/input`: named actions → keys/mouse, `keybindings.cfg`, no hard-coded gameplay keys). **Next in M3**:
 Lua item defs, equip/hotbar. Real sprite art still deferred. Controls: WASD + mouse-look, Shift sprint, Space
 jump, Ctrl crouch, **hold Left-click to wind up + WASD to aim (A/D slash, W thrust, S overhead) + release to
-strike**, F kick (knockback), **hold Right-click to block**, **E open/unlock chest**. Dev tools: F3 metrics,
+strike**, F kick (knockback), **hold Right-click to block**, **E open/unlock chest**, **Q swap weapon**. Dev tools: F3 metrics,
 F4 telemetry (jump/dims/pos), **V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**, **B toggle
 enemy box/billboard**. `func_door`/`lever`/`func_plate` map entities wire doors by `target`/`targetname`. Default map `maps/training.map`; override
 with `ADVENTURE_MAP` (loads real Quake/Arcane-Dimensions `.map` too); `tools/gen_room.py`/`gen_training.py`
@@ -32,7 +32,7 @@ ADVENTURE_SHOT=shot.png ./adventure.exe                             # one-shot s
 ```
 Skills automate these: `adv-feature` (full loop), `adv-build`, `adv-test`, `adv-new-module`, `adv-format`,
 `adv-docs`, `adv-map` (.map format authority), `adv-sprite` (Aseprite export), `adv-onboard` (new-contributor
-setup).
+setup), `adv-input-action` (wire a new control through the rebindable action map — never hard-code a key).
 
 ## Layout
 `src/` game code (built into `adventure_lib`; thin `src/main.cpp`) — subsystems `core/ render/ lua/ world/

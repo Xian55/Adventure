@@ -18,6 +18,7 @@ namespace adventure
 		Block,
 		Kick,
 		Interact,
+		NextWeapon,
 		Count,
 	};
 	constexpr int kActionCount = (int)Action::Count;

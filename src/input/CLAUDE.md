@@ -19,7 +19,8 @@ Rebindable input: named **actions** mapped to input codes, so keys aren't hard-c
 ## Rules / gotchas
 - Keep `InputMap` pure (no raylib) — it holds default key codes as local enums to avoid the raylib include.
 - Codes: letters are their ASCII (`'W'`=87); mouse is `1000+button` (never collides with key codes).
-- New action? add to `Action` (before `Count`), `kNames`, and `defaultBindings`, then wire its query in `main`.
+- New action? Use the **`adv-input-action`** skill — add to `Action` (before `Count`), `kNames`, and
+  `defaultBindings` (all same order), then wire its query in `main`. `keybindings.cfg` self-updates on launch.
 
 ## Coming
 Mouse sensitivity / invert-Y as bindable settings; optional in-game rebind screen; controller support.

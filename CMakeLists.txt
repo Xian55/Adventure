@@ -44,6 +44,7 @@ set(ADVENTURE_LIB_SOURCES
     src/combat/CombatSystem.cpp
     src/combat/Rage.cpp
     src/combat/Destructible.cpp
+    src/combat/Loadout.cpp
     src/items/Item.cpp
     src/items/Inventory.cpp
     src/items/Pickup.cpp
@@ -119,6 +120,7 @@ add_executable(adventure_tests
     tests/test_collide.cpp
     tests/test_mechanisms.cpp
     tests/test_inputmap.cpp
+    tests/test_loadout.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

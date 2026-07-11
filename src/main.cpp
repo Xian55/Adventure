@@ -6,6 +6,7 @@
 #include "core/ProfileReport.h"
 #include "combat/CombatSystem.h"
 #include "combat/Destructible.h"
+#include "combat/Loadout.h"
 #include "combat/Melee.h"
 #include "combat/Rage.h"
 #include "input/InputMap.h"
@@ -58,8 +59,9 @@ int main()
 	Metrics& metrics = Metrics::instance();
 	const Color fog = Color{26, 28, 40, 255};
 
-	// Keybindings: load keybindings.cfg (next to the exe) if present, else write the default template to edit.
-	InputMap keys;
+	// Keybindings: load keybindings.cfg (next to the exe), then rewrite it so new actions appear while the
+	// player's overrides are kept — the file is the rebind interface.
+	InputMap keys = defaultBindings();
 	{
 		const char* kCfg = "keybindings.cfg";
 		if (FileExists(kCfg))
@@ -69,12 +71,8 @@ int main()
 			if (t)
 				UnloadFileText(t);
 		}
-		else
-		{
-			keys = defaultBindings();
-			std::string txt = saveBindings(keys);
-			SaveFileText(kCfg, txt.data());
-		}
+		std::string txt = saveBindings(keys);
+		SaveFileText(kCfg, txt.data());
 	}
 
 	sScript->init();
@@ -82,7 +80,9 @@ int main()
 
 	// --- Tuning (hot-reloadable: F5) ---
 	MoveTuning tune;
-	WeaponDef weapon;
+	WeaponDef weapon;   // the active weapon's def (equipped)
+	WeaponDef swordDef; // the Lua-tuned sword base; other weapons derive from it
+	int equippedItem = kItemSword;
 	float bobFreq = 9.0f, weaponBob = 0.02f, headBob = 0.035f;
 	float kickReach = 1.6f, kickImpulse = 14.0f;
 	EnemyTuning enemyTune;
@@ -104,14 +104,15 @@ int main()
 		headBob = (float)sScript->evalNumber("tuning.headBob", headBob);
 
 		sScript->runFile("scripts/weapons/sword.lua");
-		weapon.active = (float)sScript->evalNumber("sword.active", weapon.active);
-		weapon.recovery = (float)sScript->evalNumber("sword.recovery", weapon.recovery);
-		weapon.reach = (float)sScript->evalNumber("sword.reach", weapon.reach);
-		weapon.arc = (float)sScript->evalNumber("sword.arc", weapon.arc);
-		weapon.damage = (float)sScript->evalNumber("sword.damage", weapon.damage);
-		weapon.knockback = (float)sScript->evalNumber("sword.knockback", weapon.knockback);
-		weapon.chargeMax = (float)sScript->evalNumber("sword.chargeMax", weapon.chargeMax);
-		weapon.chargeDamageMul = (float)sScript->evalNumber("sword.chargeDamageMul", weapon.chargeDamageMul);
+		swordDef.active = (float)sScript->evalNumber("sword.active", swordDef.active);
+		swordDef.recovery = (float)sScript->evalNumber("sword.recovery", swordDef.recovery);
+		swordDef.reach = (float)sScript->evalNumber("sword.reach", swordDef.reach);
+		swordDef.arc = (float)sScript->evalNumber("sword.arc", swordDef.arc);
+		swordDef.damage = (float)sScript->evalNumber("sword.damage", swordDef.damage);
+		swordDef.knockback = (float)sScript->evalNumber("sword.knockback", swordDef.knockback);
+		swordDef.chargeMax = (float)sScript->evalNumber("sword.chargeMax", swordDef.chargeMax);
+		swordDef.chargeDamageMul = (float)sScript->evalNumber("sword.chargeDamageMul", swordDef.chargeDamageMul);
+		weapon = weaponDefFor(equippedItem, swordDef); // re-derive the active weapon after a tuning reload
 		kickReach = (float)sScript->evalNumber("tuning.kickReach", kickReach);
 		kickImpulse = (float)sScript->evalNumber("tuning.kickImpulse", kickImpulse);
 
@@ -213,7 +214,10 @@ int main()
 		doors.clear();
 		levers.clear();
 		plates.clear();
-		inventory = Inventory{}; // fresh bag on (re)spawn
+		inventory = Inventory{};           // fresh bag on (re)spawn
+		addItem(inventory, kItemSword, 1); // start equipped with the sword
+		equippedItem = kItemSword;
+		weapon = weaponDefFor(equippedItem, swordDef);
 		for (const world::Entity& ent : r.data.entities)
 		{
 			PropKind kind;
@@ -238,6 +242,10 @@ int main()
 				d.dropItem = kItemCoin;
 			else if (lootKey == "key")
 				d.dropItem = kItemKey;
+			else if (lootKey == "dagger")
+				d.dropItem = kItemDagger;
+			else if (lootKey == "mace")
+				d.dropItem = kItemMace;
 			else if (kind == PropKind::Keg)
 				d.dropItem = kItemCoin; // kegs default to a coin
 			d.position = world::mapToEngine(ent.vec3("origin"));
@@ -272,6 +280,11 @@ int main()
 				c.contents.push_back(ItemStack{kItemHealthPotion, potions});
 			if (keys > 0)
 				c.contents.push_back(ItemStack{kItemKey, keys});
+			const std::string wpn = ent.str("weapon");
+			if (wpn == "dagger")
+				c.contents.push_back(ItemStack{kItemDagger, 1});
+			else if (wpn == "mace")
+				c.contents.push_back(ItemStack{kItemMace, 1});
 			const Vector3 ch = {c.radius, c.height * 0.5f, c.radius};
 			float y = c.position.y + 1.0f;
 			const float lo = y - 8.0f;
@@ -394,6 +407,15 @@ int main()
 			}
 			kickCooldown = 0.7f;
 			kickAnim = kickAnimTime; // trigger the boot-kick animation
+		}
+		if (actionPressed(keys, Action::NextWeapon)) // cycle the weapons you hold
+		{
+			const int n = nextWeapon(inventory, equippedItem);
+			if (n != kItemNone && n != equippedItem)
+			{
+				equippedItem = n;
+				weapon = weaponDefFor(equippedItem, swordDef);
+			}
 		}
 		// Use (E): the nearest facing lever, then door, then chest.
 		const int leverTarget = nearestLever(levers, player.position, player.yaw, 2.2f);
@@ -606,6 +628,7 @@ int main()
 			if (rage.berserk)
 				DrawText("BERSERK", hx + hw + 10, ry - 3, 20, Color{255, 170, 40, 255});
 			DrawText(TextFormat("Coins %d    Keys %d    Potions %d", itemCount(inventory, kItemCoin), itemCount(inventory, kItemKey), itemCount(inventory, kItemHealthPotion)), hx, ry - 30, 20, Color{230, 220, 185, 255});
+			DrawText(TextFormat("Weapon: %s  [%s to swap]", weaponName(equippedItem), codeName(actionCode(keys, Action::NextWeapon)).c_str()), hx, ry - 52, 20, Color{200, 220, 235, 255});
 			if (leverTarget >= 0 || doorTarget >= 0 || chestTarget >= 0) // unified "use" prompt
 			{
 				const char* msg = "[E] Pull lever";
