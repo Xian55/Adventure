@@ -158,8 +158,8 @@ namespace adventure
 				{
 					p.broken = true;
 					p.breakTimer = propTune->debrisTime;
-					if (p.loot != LootKind::None)
-						pickups->push_back(Pickup{p.position, p.loot, true});
+					if (p.dropItem != kItemNone)
+						pickups->push_back(Pickup{p.position, p.dropItem, true});
 				}
 			}
 		}

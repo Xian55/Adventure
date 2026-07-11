@@ -24,8 +24,8 @@ namespace adventure
 			{
 				p.broken = true;
 				p.breakTimer = t.debrisTime;
-				if (p.loot != LootKind::None)
-					pickups.push_back(Pickup{p.position, p.loot, true}); // container spills its loot
+				if (p.dropItem != kItemNone)
+					pickups.push_back(Pickup{p.position, p.dropItem, true}); // container spills its loot
 				++broke;
 			}
 		}
@@ -42,29 +42,6 @@ namespace adventure
 			p.breakTimer -= dt;
 			if (p.breakTimer <= 0.0f)
 				p.active = false;
-		}
-	}
-
-	void collectPickups(std::vector<Pickup>& pickups, Vector3 playerPos, float& playerHealth, float maxHealth, const PropTuning& t)
-	{
-		const float r2 = t.pickupRadius * t.pickupRadius;
-		for (Pickup& pk : pickups)
-		{
-			if (!pk.active)
-				continue;
-			const float dx = pk.position.x - playerPos.x;
-			const float dy = pk.position.y - playerPos.y;
-			const float dz = pk.position.z - playerPos.z;
-			if (dx * dx + dy * dy + dz * dz > r2)
-				continue;
-
-			if (pk.kind == LootKind::Health)
-			{
-				playerHealth += t.healAmount;
-				if (playerHealth > maxHealth)
-					playerHealth = maxHealth;
-			}
-			pk.active = false;
 		}
 	}
 

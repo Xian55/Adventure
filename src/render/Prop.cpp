@@ -76,7 +76,22 @@ namespace adventure
 				continue;
 			const float bob = std::sin(time * 3.0f) * 0.08f;
 			const Vector3 pos = {pk.position.x, pk.position.y + 0.25f + bob, pk.position.z};
-			const Color c = pk.kind == LootKind::Health ? Color{80, 220, 120, 255} : Color{220, 210, 120, 255};
+			Color c;
+			switch (itemDef(pk.itemId).kind)
+			{
+			case ItemKind::Consumable:
+				c = Color{80, 220, 120, 255}; // green orb
+				break;
+			case ItemKind::Coin:
+				c = Color{235, 200, 70, 255}; // gold
+				break;
+			case ItemKind::Key:
+				c = Color{200, 210, 225, 255}; // pale steel
+				break;
+			default:
+				c = Color{220, 210, 120, 255};
+				break;
+			}
 			DrawCube(pos, 0.18f, 0.18f, 0.18f, c);
 			DrawCubeWires(pos, 0.2f, 0.2f, 0.2f, Color{255, 255, 255, 200});
 		}

@@ -44,8 +44,9 @@ into `resolveMeleeHits(..., damageMul)` and the swing-speed dt. Numbers in `tuni
 enemies damages props in its arc, sharing the one-per-swing `hitThisSwing` debounce. (Earlier the prop hit was
 gated on a Charge→Active transition detected in the fixed loop, but that transition happens in `releaseSwing`
 in the input pass, so the sword never damaged props — fixed by folding it into `resolveMeleeHits`.) Kick
-shatters outright via `damageProps`. A keg or a `loot="health"` prop drops a `Pickup` (health orb) on break;
-the player heals by walking over it. Intact props **block** the player and enemies (`resolveActorProps`,
+shatters outright via `damageProps`. A prop's `dropItem` (from the map `loot` key: health/coin/key; keg → coin) spawns an
+`items::Pickup` on break — consumables heal on touch, coins/keys go to the inventory (see `src/items`).
+Intact props **block** the player and enemies (`resolveActorProps`,
 run after `updatePlayer`/`updateEnemies`); broken rubble is walk-through. `PropTuning` = C++ defaults for now.
 
 ## Coming

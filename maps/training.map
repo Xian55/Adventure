@@ -140,6 +140,7 @@
 {
 "classname" "prop_barrel"
 "origin" "-64 -64 0"
+"loot" "key"
 }
 {
 "classname" "prop_barrel"

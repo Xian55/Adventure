@@ -8,6 +8,8 @@
 #include "combat/Destructible.h"
 #include "combat/Melee.h"
 #include "combat/Rage.h"
+#include "items/Inventory.h"
+#include "items/Pickup.h"
 #include "lua/ScriptEngine.h"
 #include "player/JumpMeter.h"
 #include "player/PlayerController.h"
@@ -117,6 +119,7 @@ int main()
 	std::vector<world::Hazard> hazards;
 	std::vector<Destructible> props;
 	std::vector<Pickup> pickups;
+	Inventory inventory;
 	PropTuning propTune;
 	Player player;
 	std::vector<Enemy> enemies;
@@ -177,6 +180,7 @@ int main()
 		// Destructible props: barrels / crates / kegs from prop_* entities (kegs + loot="health" drop a pickup).
 		props.clear();
 		pickups.clear();
+		inventory = Inventory{}; // fresh bag on (re)spawn
 		for (const world::Entity& ent : r.data.entities)
 		{
 			PropKind kind;
@@ -194,8 +198,15 @@ int main()
 			d.radius = kind == PropKind::Crate ? 0.4f : 0.35f;
 			d.height = kind == PropKind::Crate ? 0.8f : (kind == PropKind::Keg ? 0.7f : 1.0f);
 			d.health = d.maxHealth = kind == PropKind::Crate ? 20.0f : 30.0f;
-			if (ent.str("loot") == "health" || kind == PropKind::Keg)
-				d.loot = LootKind::Health;
+			const std::string lootKey = ent.str("loot");
+			if (lootKey == "health")
+				d.dropItem = kItemHealthPotion;
+			else if (lootKey == "coin")
+				d.dropItem = kItemCoin;
+			else if (lootKey == "key")
+				d.dropItem = kItemKey;
+			else if (kind == PropKind::Keg)
+				d.dropItem = kItemCoin; // kegs default to a coin
 			d.position = world::mapToEngine(ent.vec3("origin"));
 			d.position.y += d.height * 0.5f; // origin at feet -> center
 			const Vector3 ph = {d.radius, d.height * 0.5f, d.radius};
@@ -350,7 +361,7 @@ int main()
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);
-				collectPickups(pickups, player.position, player.health, player.maxHealth, propTune);
+				collectPickups(pickups, player.position, inventory, player.health, player.maxHealth, propTune.pickupRadius);
 				{
 					const Vector3 pf = {player.position.x, player.position.y - tune.height * 0.5f, player.position.z};
 					player.health -= world::hazardDamageAt(hazards, pf) * config::kFixedDt; // stand in it, take damage
@@ -418,24 +429,6 @@ int main()
 				drawViewmodel(bobPhase, weaponBobAmt, (float)GetTime(), (int)melee.phase, phaseProgress(melee, weapon), vmDir, chargeFraction(melee, weapon), kickAnim > 0.0f ? kickAnim / kickAnimTime : 0.0f);
 			}
 			DrawText("ADVENTURE  M1", 6, 6, 20, RAYWHITE);
-			// Health bar (bottom-left of the low-res frame) + block indicator.
-			{
-				const int rh = renderer.lowH();
-				const float hp = player.maxHealth > 0.01f ? fmaxf(0.0f, player.health) / player.maxHealth : 0.0f;
-				const int bx = 8, bw = 120, bh2 = 8, by = rh - 16;
-				DrawRectangle(bx - 1, by - 1, bw + 2, bh2 + 2, Color{20, 15, 15, 220});
-				DrawRectangle(bx, by, (int)(bw * hp), bh2, Color{170, 50, 45, 255});
-				if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
-					DrawText("BLOCK", bx + bw + 6, by, 10, Color{150, 190, 230, 255});
-				// Rage meter above the health bar; glows + flashes "BERSERK" when maxed.
-				const float rf = rageFraction(rage, rageTune);
-				const int ry = by - 9;
-				DrawRectangle(bx - 1, ry - 1, bw + 2, 7, Color{20, 15, 15, 220});
-				const Color rageCol = rage.berserk ? Color{255, (unsigned char)(150 + (int)(80 * sinf((float)GetTime() * 18.0f))), 30, 255} : Color{210, 120, 40, 255};
-				DrawRectangle(bx, ry, (int)(bw * rf), 5, rageCol);
-				if (rage.berserk)
-					DrawText("BERSERK", bx + bw + 6, ry - 2, 10, Color{255, 170, 40, 255});
-			}
 			renderer.endScene();
 		}
 
@@ -453,6 +446,24 @@ int main()
 			renderer.blit();
 		}
 		drawMetricsOverlay(metrics, showMetrics);
+		{ // Gameplay HUD (native res, lower-left): health, rage, block/berserk, inventory.
+			// Fixed coords: GetRenderHeight() is DPI-unreliable here (see the telemetry note), so a
+			// bottom anchor lands off-screen. These sit safely in-frame for the 1280x720 window.
+			const int hx = 20, hw = 320, hh = 20, hy = 620;
+			const float hpFrac = player.maxHealth > 0.01f ? fmaxf(0.0f, player.health) / player.maxHealth : 0.0f;
+			DrawRectangle(hx - 2, hy - 2, hw + 4, hh + 4, Color{20, 15, 15, 220});
+			DrawRectangle(hx, hy, (int)(hw * hpFrac), hh, Color{175, 50, 45, 255});
+			DrawText(TextFormat("%d / %d", (int)fmaxf(0.0f, player.health), (int)player.maxHealth), hx + hw + 10, hy, 20, RAYWHITE);
+			if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+				DrawText("BLOCK", hx + hw + 120, hy, 20, Color{150, 190, 230, 255});
+			const int ry = hy - 22;
+			const float rf = rageFraction(rage, rageTune);
+			DrawRectangle(hx - 2, ry - 2, hw + 4, 14 + 4, Color{20, 15, 15, 220});
+			DrawRectangle(hx, ry, (int)(hw * rf), 14, rage.berserk ? Color{255, 170, 40, 255} : Color{210, 120, 40, 255});
+			if (rage.berserk)
+				DrawText("BERSERK", hx + hw + 10, ry - 3, 20, Color{255, 170, 40, 255});
+			DrawText(TextFormat("Coins %d    Keys %d    Potions %d", itemCount(inventory, kItemCoin), itemCount(inventory, kItemKey), itemCount(inventory, kItemHealthPotion)), hx, ry - 30, 20, Color{230, 220, 185, 255});
+		}
 		if (showTelemetry)
 		{
 			int ty = 156; // below the metrics panel (fixed coords; GetRenderHeight is DPI-unreliable)

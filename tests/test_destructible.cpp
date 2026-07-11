@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 #include "combat/Destructible.h"
+#include "items/Item.h"
 
 #include <cmath>
 
@@ -7,12 +8,12 @@ using namespace adventure;
 
 namespace
 {
-	Destructible propAt(float x, float z, float hp, LootKind loot = LootKind::None)
+	Destructible propAt(float x, float z, float hp, int drop = kItemNone)
 	{
 		Destructible d;
 		d.position = {x, 0.5f, z};
 		d.health = d.maxHealth = hp;
-		d.loot = loot;
+		d.dropItem = drop;
 		return d;
 	}
 } // namespace
@@ -31,17 +32,17 @@ TEST_CASE("a hit in range damages a prop and breaks it at zero health")
 	broke = damageProps(props, loot, Vector3{0, 0.5f, 0}, 0.6f, 20.0f, t);
 	CHECK(broke == 1);
 	CHECK(props[0].broken);
-	CHECK(loot.empty()); // no loot on this one
+	CHECK(loot.empty()); // no drop on this one
 }
 
-TEST_CASE("a container spills a health pickup when it breaks")
+TEST_CASE("a container drops its item when it breaks")
 {
 	PropTuning t;
-	std::vector<Destructible> props{propAt(2, 0, 10.0f, LootKind::Health)};
+	std::vector<Destructible> props{propAt(2, 0, 10.0f, kItemHealthPotion)};
 	std::vector<Pickup> loot;
 	damageProps(props, loot, Vector3{2, 0.5f, 0}, 0.6f, 50.0f, t);
 	REQUIRE(loot.size() == 1);
-	CHECK(loot[0].kind == LootKind::Health);
+	CHECK(loot[0].itemId == kItemHealthPotion);
 	CHECK(loot[0].position.x == doctest::Approx(2.0));
 }
 
@@ -54,7 +55,7 @@ TEST_CASE("out-of-range and already-broken props are ignored")
 	CHECK(props[0].broken);
 	CHECK_FALSE(props[1].broken);
 
-	props[0].health = 5.0f; // pretend it had health; a second blast must not re-break it
+	props[0].health = 5.0f; // a second blast must not re-break rubble
 	int broke = damageProps(props, loot, Vector3{0, 0.5f, 0}, 0.6f, 50.0f, t);
 	CHECK(broke == 0);
 }
@@ -70,32 +71,6 @@ TEST_CASE("debris despawns the prop after the timer")
 	for (int i = 0; i < 8; ++i)
 		updateProps(props, t, 1.0f / 60.0f);
 	CHECK_FALSE(props[0].active);
-}
-
-TEST_CASE("walking over a health pickup heals, clamped to max")
-{
-	PropTuning t;
-	t.healAmount = 25.0f;
-	std::vector<Pickup> pickups{Pickup{{0, 0.5f, 0}, LootKind::Health, true}};
-	float hp = 60.0f;
-	collectPickups(pickups, Vector3{0, 0.5f, 0.3f}, hp, 100.0f, t);
-	CHECK(hp == doctest::Approx(85.0));
-	CHECK_FALSE(pickups[0].active);
-
-	pickups = {Pickup{{0, 0.5f, 0}, LootKind::Health, true}};
-	hp = 90.0f;
-	collectPickups(pickups, Vector3{0, 0.5f, 0}, hp, 100.0f, t);
-	CHECK(hp == doctest::Approx(100.0)); // clamped, not 115
-}
-
-TEST_CASE("a distant pickup is not collected")
-{
-	PropTuning t;
-	std::vector<Pickup> pickups{Pickup{{0, 0.5f, 0}, LootKind::Health, true}};
-	float hp = 50.0f;
-	collectPickups(pickups, Vector3{5, 0.5f, 0}, hp, 100.0f, t);
-	CHECK(hp == doctest::Approx(50.0));
-	CHECK(pickups[0].active);
 }
 
 TEST_CASE("an intact prop blocks an actor, pushing it out to the surface")
