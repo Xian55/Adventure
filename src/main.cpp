@@ -485,9 +485,9 @@ int main()
 			MoveTuning mt = tune;                 // move-speed skill applies to a working copy
 			mt.moveSpeed *= st.moveSpeedMul;
 			mt.sprintSpeed *= st.moveSpeedMul;
-			RageTuning rt = rageTune; // rage-build skill scales gains
-			rt.gainPerHit *= st.rageBuildMul;
-			rt.gainPerKill *= st.rageBuildMul;
+			RageTuning rageEff = rageTune; // rage-build skill scales gains
+			rageEff.gainPerHit *= st.rageBuildMul;
+			rageEff.gainPerKill *= st.rageBuildMul;
 			MoveInput in;
 			in.forward = (actionDown(keys, Action::MoveForward) ? 1.0f : 0.0f) - (actionDown(keys, Action::MoveBack) ? 1.0f : 0.0f);
 			in.right = (actionDown(keys, Action::MoveRight) ? 1.0f : 0.0f) - (actionDown(keys, Action::MoveLeft) ? 1.0f : 0.0f);
@@ -528,7 +528,7 @@ int main()
 				}
 				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune));                                                                                                                  // berserk swings faster
 				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune) * st.damageMul, &props, &pickups, &propTune); // Power skill scales damage
-				addRage(rage, rt, hitResult.hits, hitResult.kills);                                                                                                                                           // landed melee builds rage (Adrenaline scales)
+				addRage(rage, rageEff, hitResult.hits, hitResult.kills);                                                                                                                                      // landed melee builds rage (Adrenaline scales)
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
