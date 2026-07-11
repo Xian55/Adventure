@@ -19,6 +19,7 @@ namespace adventure
 		Kick,
 		Interact,
 		NextWeapon,
+		SkillMenu,
 		Count,
 	};
 	constexpr int kActionCount = (int)Action::Count;

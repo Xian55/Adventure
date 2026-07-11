@@ -28,9 +28,9 @@ namespace adventure
 		Empty,       // opened, but held nothing
 	};
 
-	// Try to open a container: a locked one consumes one key from `inv` (fails with Locked if none). On
-	// opening, spills its contents as Pickups around the chest and clears them. Pure.
-	OpenResult tryOpenContainer(Container& c, Inventory& inv, std::vector<Pickup>& pickups);
+	// Try to open a container: a locked one consumes one key from `inv` (fails with Locked if none), unless
+	// `lockpick` is set (opens locks for free). On opening, spills its contents as Pickups. Pure.
+	OpenResult tryOpenContainer(Container& c, Inventory& inv, std::vector<Pickup>& pickups, bool lockpick = false);
 
 	// Index of the closest openable container within `range` and in front of the player (dot test), or -1.
 	// Skips already-open chests. Pure.

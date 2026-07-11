@@ -54,6 +54,7 @@ set(ADVENTURE_LIB_SOURCES
     src/render/Mech.cpp
     src/input/InputMap.cpp
     src/input/InputQuery.cpp
+    src/rpg/SkillTree.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
@@ -121,6 +122,7 @@ add_executable(adventure_tests
     tests/test_mechanisms.cpp
     tests/test_inputmap.cpp
     tests/test_loadout.cpp
+    tests/test_skilltree.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

@@ -32,6 +32,7 @@ namespace adventure
 		float radius = 0.4f;
 		float height = 1.8f;
 		RenderKind render = RenderKind::Billboard;
-		bool active = true; // false once despawned
+		bool active = true;  // false once despawned
+		bool scored = false; // skill point already awarded for this kill
 	};
 } // namespace adventure

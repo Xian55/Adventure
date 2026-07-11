@@ -41,6 +41,11 @@ require Combat skill), staves (slow AoE stun, no shield), armor (defense + skill
 **Our lightweight cut**: keep the tree shape + gating + quest/secret point income, trim the node count. All
 trees/nodes/costs/effects and weapon defs live in **Lua**; C++ holds earned/spent state + applies effects.
 
+**Status (M4, in progress)**: shipped as `src/rpg/SkillTree` — 5 nodes (Toughness/Power/Adrenaline/Endurance/
+Lockpicking) over Combat/Body/Utility, ranks + prereqs, K overlay to spend, derived HP/dmg/speed/rage/lockpick.
+Node table is C++ for now (→ Lua later). **Point income is a placeholder** (kills) — replace with quests +
+hidden-location discovery when those exist (M6/M7). Still to add: stamina/attributes, more nodes, gear gating.
+
 ## Combat feel (M2 polish / M4)
 - **Rage → Berserk** (Dark Messiah): repeated attacks fill a rage meter; when full, the player can trigger a
   timed **berserk** state (bonus damage/speed, maybe instant-kills). A combat resource — meter on the HUD,

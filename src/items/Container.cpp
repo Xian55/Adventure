@@ -4,13 +4,13 @@
 
 namespace adventure
 {
-	OpenResult tryOpenContainer(Container& c, Inventory& inv, std::vector<Pickup>& pickups)
+	OpenResult tryOpenContainer(Container& c, Inventory& inv, std::vector<Pickup>& pickups, bool lockpick)
 	{
 		if (c.open)
 			return OpenResult::AlreadyOpen;
 		if (c.locked)
 		{
-			if (!removeItem(inv, kItemKey, 1)) // spend a key to unlock
+			if (!lockpick && !removeItem(inv, kItemKey, 1)) // a key (or the lockpick skill) unlocks
 				return OpenResult::Locked;
 			c.locked = false;
 		}

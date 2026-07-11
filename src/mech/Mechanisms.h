@@ -58,9 +58,9 @@ namespace adventure
 	// Set each door's wantOpen = manualOpen OR any linked lever(on)/plate(pressed) — unless it is still locked.
 	void applyActivations(std::vector<Door>& doors, const std::vector<Lever>& levers, const std::vector<Plate>& plates);
 
-	// E-use a door: a locked one spends a key from `inv` (Locked if none) then latches open; a plain door
-	// (no targetname, unlocked) toggles. Pure.
-	DoorUse useDoor(Door& d, Inventory& inv);
+	// E-use a door: a locked one spends a key from `inv` (Locked if none), unless `lockpick` is set, then
+	// latches open; a plain door (no targetname, unlocked) toggles. Pure.
+	DoorUse useDoor(Door& d, Inventory& inv, bool lockpick = false);
 
 	int nearestLever(const std::vector<Lever>& levers, Vector3 playerPos, float playerYaw, float range);
 	// Nearest facing E-usable door (locked, or plain with no targetname), or -1.

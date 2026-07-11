@@ -17,6 +17,7 @@ namespace adventure
 			K_W = 87,
 			K_A = 65,
 			K_Q = 81,
+			K_K = 75,
 			K_LSHIFT = 340,
 			K_LCTRL = 341,
 		};
@@ -34,6 +35,7 @@ namespace adventure
 		    "Kick",
 		    "Interact",
 		    "NextWeapon",
+		    "SkillMenu",
 		};
 	} // namespace
 
@@ -52,6 +54,7 @@ namespace adventure
 		m.codes[(int)Action::Kick] = K_F;
 		m.codes[(int)Action::Interact] = K_E;
 		m.codes[(int)Action::NextWeapon] = K_Q;
+		m.codes[(int)Action::SkillMenu] = K_K;
 		return m;
 	}
 

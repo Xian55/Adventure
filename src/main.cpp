@@ -19,6 +19,7 @@
 #include "lua/ScriptEngine.h"
 #include "player/JumpMeter.h"
 #include "player/PlayerController.h"
+#include "rpg/SkillTree.h"
 #include "render/MetricsOverlay.h"
 #include "render/Billboard.h"
 #include "render/Mech.h"
@@ -151,6 +152,7 @@ int main()
 	std::vector<Plate> plates;
 	Inventory inventory;
 	PropTuning propTune;
+	SkillState skills; // persists across respawn (not reset in loadMap)
 	Player player;
 	std::vector<Enemy> enemies;
 	auto loadMap = [&](const char* path) {
@@ -170,8 +172,9 @@ int main()
 			player.position.y += tune.height * 0.5f; // origin at feet -> AABB center
 		}
 		player.velocity = Vector3{0, 0, 0};
-		player.health = player.maxHealth; // fresh spawn / respawn
-		rage = RageState{};               // lose the meter on death
+		player.maxHealth = 100.0f + deriveStats(skills).maxHealthBonus; // Toughness raises the cap
+		player.health = player.maxHealth;                               // fresh spawn / respawn
+		rage = RageState{};                                             // lose the meter on death
 
 		// Spawn skeletons from monster_skeleton entities; if the map has none, drop a few in front so the
 		// combat slice always has targets.
@@ -359,6 +362,8 @@ int main()
 	const float kickAnimTime = 0.3f;
 	float accumulator = 0.0f;
 	float bobPhase = 0.0f;
+	bool showSkills = false; // skill-tree overlay open (pauses the sim)
+	int skillSel = 0;
 
 	std::vector<float> frameSamples;
 	if (profiling)
@@ -367,6 +372,25 @@ int main()
 	while (!WindowShouldClose())
 	{
 		metrics.beginFrame();
+
+		// Skill-tree overlay (pauses the sim). Nav: Up/Down select, Enter to unlock.
+		if (actionPressed(keys, Action::SkillMenu))
+		{
+			showSkills = !showSkills;
+			if (showSkills)
+				EnableCursor();
+			else
+				DisableCursor();
+		}
+		if (showSkills)
+		{
+			if (IsKeyPressed(KEY_DOWN))
+				skillSel = (skillSel + 1) % SKILL_COUNT;
+			if (IsKeyPressed(KEY_UP))
+				skillSel = (skillSel + SKILL_COUNT - 1) % SKILL_COUNT;
+			if (IsKeyPressed(KEY_ENTER) && unlockSkill(skills, skillSel))
+				player.maxHealth = 100.0f + deriveStats(skills).maxHealthBonus; // Toughness may have raised the cap
+		}
 
 		if (IsKeyPressed(KEY_F3))
 			showMetrics = !showMetrics;
@@ -423,14 +447,15 @@ int main()
 		const int leverTarget = nearestLever(levers, player.position, player.yaw, 2.2f);
 		const int doorTarget = nearestDoor(doors, player.position, player.yaw, 2.2f);
 		const int chestTarget = nearestContainer(containers, player.position, player.yaw, 2.2f);
-		if (actionPressed(keys, Action::Interact))
+		if (actionPressed(keys, Action::Interact) && !showSkills)
 		{
+			const bool lockpick = deriveStats(skills).lockpick; // Lockpicking opens locks without a key
 			if (leverTarget >= 0)
 				levers[leverTarget].on = !levers[leverTarget].on;
 			else if (doorTarget >= 0)
-				useDoor(doors[doorTarget], inventory);
+				useDoor(doors[doorTarget], inventory, lockpick);
 			else if (chestTarget >= 0)
-				tryOpenContainer(containers[chestTarget], inventory, pickups);
+				tryOpenContainer(containers[chestTarget], inventory, pickups, lockpick);
 		}
 		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
 		{
@@ -442,7 +467,7 @@ int main()
 
 		// Mouse look (per display frame for smoothness).
 		{
-			const float sens = 0.0022f;
+			const float sens = showSkills ? 0.0f : 0.0022f; // freeze the look while the skill menu is open
 			Vector2 md = GetMouseDelta();
 			player.yaw += md.x * sens;
 			player.pitch -= md.y * sens;
@@ -456,13 +481,21 @@ int main()
 		// Fixed-step movement (walk/collide) or free-fly (noclip).
 		{
 			Metrics::Scope s(metrics, "update");
+			const Stats st = deriveStats(skills); // skill effects
+			MoveTuning mt = tune;                 // move-speed skill applies to a working copy
+			mt.moveSpeed *= st.moveSpeedMul;
+			mt.sprintSpeed *= st.moveSpeedMul;
+			RageTuning rt = rageTune; // rage-build skill scales gains
+			rt.gainPerHit *= st.rageBuildMul;
+			rt.gainPerKill *= st.rageBuildMul;
 			MoveInput in;
 			in.forward = (actionDown(keys, Action::MoveForward) ? 1.0f : 0.0f) - (actionDown(keys, Action::MoveBack) ? 1.0f : 0.0f);
 			in.right = (actionDown(keys, Action::MoveRight) ? 1.0f : 0.0f) - (actionDown(keys, Action::MoveLeft) ? 1.0f : 0.0f);
 			in.jump = actionDown(keys, Action::Jump);
 			in.crouch = actionDown(keys, Action::Crouch);
 			in.sprint = actionDown(keys, Action::Sprint);
-			accumulator += GetFrameTime();
+			if (!showSkills)
+				accumulator += GetFrameTime(); // paused while the skill menu is open
 			while (accumulator >= config::kFixedDt)
 			{
 				if (noclip)
@@ -479,7 +512,7 @@ int main()
 				}
 				else
 				{
-					updatePlayer(player, in, collision, tune, config::kFixedDt);
+					updatePlayer(player, in, collision, mt, config::kFixedDt);
 					{ // props + chests are solid boxes: block from the sides, stand on top (jump onto them)
 						std::vector<SolidBox> solids;
 						for (const Destructible& p : props)
@@ -493,15 +526,21 @@ int main()
 					}
 					jumpMeter.update(player, config::kFixedDt);
 				}
-				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune));                                                                                                   // berserk swings faster
-				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune), &props, &pickups, &propTune); // hits enemies + smashes props
-				addRage(rage, rageTune, hitResult.hits, hitResult.kills);                                                                                                                      // landed melee builds rage
+				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune));                                                                                                                  // berserk swings faster
+				const MeleeHitResult hitResult = resolveMeleeHits(melee, weapon, player.position, player.yaw, enemies, enemyTune, rageDamageMul(rage, rageTune) * st.damageMul, &props, &pickups, &propTune); // Power skill scales damage
+				addRage(rage, rt, hitResult.hits, hitResult.kills);                                                                                                                                           // landed melee builds rage (Adrenaline scales)
 				PlayerTarget tgt;
 				tgt.pos = player.position;
 				tgt.yaw = player.yaw;
 				tgt.shieldRaised = actionDown(keys, Action::Block); // hold to block (rebindable)
 				tgt.health = &player.health;
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
+				for (Enemy& e : enemies) // a kill grants a skill point (placeholder income until quests/secrets)
+					if (e.state == EnemyState::Dead && !e.scored)
+					{
+						skills.points++;
+						e.scored = true;
+					}
 				for (Enemy& e : enemies) // props block enemies too (corner them behind a barrel)
 					if (e.active && e.state != EnemyState::Dead)
 					{
@@ -614,6 +653,27 @@ int main()
 			renderer.blit();
 		}
 		drawMetricsOverlay(metrics, showMetrics);
+		if (showSkills)
+		{ // Skill-tree overlay (native res)
+			DrawRectangle(0, 0, GetRenderWidth(), GetRenderHeight(), Color{0, 0, 0, 150});
+			const int px = 90, py = 120;
+			DrawText("SKILL TREE", px, py - 46, 34, Color{240, 230, 190, 255});
+			DrawText(TextFormat("Points: %d     Up/Down select   Enter unlock   %s close", skills.points, codeName(actionCode(keys, Action::SkillMenu)).c_str()), px, py - 8, 20, Color{200, 210, 220, 255});
+			for (int i = 0; i < SKILL_COUNT; ++i)
+			{
+				const SkillNode& n = skillNode(i);
+				const int rank = skills.rank[i];
+				const int cost = skillCost(i, rank);
+				const bool sel = (i == skillSel);
+				const char* status = rank >= n.maxRank ? "MAX" : (canUnlock(skills, i) ? "available" : "locked");
+				const int y = py + 34 + i * 34;
+				if (sel)
+					DrawRectangle(px - 10, y - 5, 760, 32, Color{60, 55, 40, 200});
+				DrawText(TextFormat("%-12s [%s]  rank %d/%d  cost %d  - %s", n.name, n.tree, rank, n.maxRank, cost < 0 ? 0 : cost, status), px, y, 22, sel ? Color{255, 240, 180, 255} : Color{210, 210, 215, 255});
+			}
+			const Stats sst = deriveStats(skills);
+			DrawText(TextFormat("HP +%d    dmg x%.2f    speed x%.2f    rage x%.2f    lockpick %s", (int)sst.maxHealthBonus, sst.damageMul, sst.moveSpeedMul, sst.rageBuildMul, sst.lockpick ? "yes" : "no"), px, py + 34 + SKILL_COUNT * 34 + 14, 20, Color{150, 205, 150, 255});
+		}
 		{ // Gameplay HUD (native res, lower-left): health, rage, block/berserk, inventory.
 			// Fixed coords: GetRenderHeight() is DPI-unreliable here (see the telemetry note), so a
 			// bottom anchor lands off-screen. These sit safely in-frame for the 1280x720 window.
@@ -632,6 +692,8 @@ int main()
 				DrawText("BERSERK", hx + hw + 10, ry - 3, 20, Color{255, 170, 40, 255});
 			DrawText(TextFormat("Coins %d    Keys %d    Potions %d", itemCount(inventory, kItemCoin), itemCount(inventory, kItemKey), itemCount(inventory, kItemHealthPotion)), hx, ry - 30, 20, Color{230, 220, 185, 255});
 			DrawText(TextFormat("Weapon: %s  [%s to swap]", weaponName(equippedItem), codeName(actionCode(keys, Action::NextWeapon)).c_str()), hx, ry - 52, 20, Color{200, 220, 235, 255});
+			if (skills.points > 0)
+				DrawText(TextFormat("Skill points: %d  [%s]", skills.points, codeName(actionCode(keys, Action::SkillMenu)).c_str()), hx, ry - 74, 20, Color{235, 220, 130, 255});
 			if (leverTarget >= 0 || doorTarget >= 0 || chestTarget >= 0) // unified "use" prompt
 			{
 				const char* msg = "[E] Pull lever";

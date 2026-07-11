@@ -108,11 +108,11 @@ namespace adventure
 		}
 	}
 
-	DoorUse useDoor(Door& d, Inventory& inv)
+	DoorUse useDoor(Door& d, Inventory& inv, bool lockpick)
 	{
 		if (d.locked)
 		{
-			if (!removeItem(inv, kItemKey, 1))
+			if (!lockpick && !removeItem(inv, kItemKey, 1))
 				return DoorUse::Locked;
 			d.locked = false;
 			d.manualOpen = true; // swings open once unlocked
