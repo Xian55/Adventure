@@ -7,12 +7,14 @@ Quake first-person movement + AABB-vs-brush collision (`src/player`), torch+swor
 (`render/Viewmodel`), Lua feel-tuning, and a combat slice: directional melee, one skeleton that approaches /
 telegraphs / strikes back, kick knockback, shield block, player health + respawn, rage→berserk meter, billboard
 enemy sprites, `trigger_hurt` lava hazards (kick enemies in), destructible props (barrels/crates/kegs that
-smash + drop loot) (`src/combat` + `render/`), and **M3a: items/inventory/pickups + HUD** (`src/items`:
-coins/keys/potions collected into a stacking bag; consumables auto-heal; native-res HUD). **Next in M3**:
-Lua item defs, equip/hotbar, chests + keys. Real sprite art still deferred. Controls: WASD + mouse-look, Shift sprint, Space
+smash + drop loot) (`src/combat` + `render/`), and **M3a/b: items/inventory/pickups + HUD + chests**
+(`src/items`: coins/keys/potions in a stacking bag; consumables auto-heal; native-res HUD; **chests** — E to
+open, locked ones need a key; props/chests solid + standable). **Next in M3**: Lua item defs, equip/hotbar.
+Real sprite art still deferred. Controls: WASD + mouse-look, Shift sprint, Space
 jump, Ctrl crouch, **hold Left-click to wind up + WASD to aim (A/D slash, W thrust, S overhead) + release to
-strike**, F kick (knockback), **hold Right-click to block**. Dev tools: F3 metrics, F4 telemetry (jump/dims/pos),
-**V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**, **B toggle enemy box/billboard**. Default map `maps/training.map`; override
+strike**, F kick (knockback), **hold Right-click to block**, **E open/unlock chest**. Dev tools: F3 metrics,
+F4 telemetry (jump/dims/pos), **V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**, **B toggle
+enemy box/billboard**. Default map `maps/training.map`; override
 with `ADVENTURE_MAP` (loads real Quake/Arcane-Dimensions `.map` too); `tools/gen_room.py`/`gen_training.py`
 emit maps.
 

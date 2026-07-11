@@ -13,6 +13,7 @@ namespace adventure
 		Vector3 position{0, 0, 0};
 		int itemId = kItemNone;
 		bool active = true;
+		int count = 1; // how many the pickup is worth (a spilled coin-pile, etc.)
 	};
 
 	// Collect every active pickup within `radius` of the player: a Consumable is used immediately (heal,

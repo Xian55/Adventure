@@ -1,5 +1,7 @@
 #include "render/Prop.h"
 
+#include "rlgl.h"
+
 #include <cmath>
 
 namespace adventure
@@ -94,6 +96,35 @@ namespace adventure
 			}
 			DrawCube(pos, 0.18f, 0.18f, 0.18f, c);
 			DrawCubeWires(pos, 0.2f, 0.2f, 0.2f, Color{255, 255, 255, 200});
+		}
+	}
+
+	void drawContainers(const std::vector<Container>& containers)
+	{
+		for (const Container& c : containers)
+		{
+			const float w = c.radius * 2.0f;
+			const float d = c.radius * 2.0f;
+			const float bodyH = c.height * 0.7f;
+			const float lidH = c.height * 0.3f;
+			const Vector3 feet = {c.position.x, c.position.y - c.height * 0.5f, c.position.z};
+			const Color wood = c.locked ? Color{92, 66, 40, 255} : Color{125, 92, 55, 255};
+			const Color trim = Color{68, 50, 32, 255};
+
+			const Vector3 bodyC = {feet.x, feet.y + bodyH * 0.5f, feet.z};
+			DrawCube(bodyC, w, bodyH, d, wood);
+			DrawCubeWires(bodyC, w, bodyH, d, trim);
+
+			rlPushMatrix(); // lid hinges at the back-top edge; swings up when open
+			rlTranslatef(feet.x, feet.y + bodyH, feet.z - c.radius);
+			if (c.open)
+				rlRotatef(-105.0f, 1, 0, 0);
+			DrawCube(Vector3{0, lidH * 0.5f, c.radius}, w, lidH, d, wood);
+			DrawCubeWires(Vector3{0, lidH * 0.5f, c.radius}, w, lidH, d, trim);
+			rlPopMatrix();
+
+			if (c.locked) // a metal lock plate on the front
+				DrawCube(Vector3{feet.x, feet.y + bodyH * 0.6f, feet.z + c.radius + 0.02f}, 0.13f, 0.13f, 0.04f, Color{170, 172, 182, 255});
 		}
 	}
 } // namespace adventure

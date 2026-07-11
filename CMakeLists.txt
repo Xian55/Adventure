@@ -47,6 +47,8 @@ set(ADVENTURE_LIB_SOURCES
     src/items/Item.cpp
     src/items/Inventory.cpp
     src/items/Pickup.cpp
+    src/items/Container.cpp
+    src/items/Collide.cpp
     src/render/Renderer.cpp
     src/render/MetricsOverlay.cpp
     src/render/WorldRenderer.cpp
@@ -109,6 +111,8 @@ add_executable(adventure_tests
     tests/test_destructible.cpp
     tests/test_inventory.cpp
     tests/test_pickup.cpp
+    tests/test_container.cpp
+    tests/test_collide.cpp
     tests/test_sandbox.cpp
 )
 target_link_libraries(adventure_tests PRIVATE adventure_lib doctest::doctest)

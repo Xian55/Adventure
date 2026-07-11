@@ -8,6 +8,8 @@
 #include "combat/Destructible.h"
 #include "combat/Melee.h"
 #include "combat/Rage.h"
+#include "items/Collide.h"
+#include "items/Container.h"
 #include "items/Inventory.h"
 #include "items/Pickup.h"
 #include "lua/ScriptEngine.h"
@@ -119,6 +121,7 @@ int main()
 	std::vector<world::Hazard> hazards;
 	std::vector<Destructible> props;
 	std::vector<Pickup> pickups;
+	std::vector<Container> containers;
 	Inventory inventory;
 	PropTuning propTune;
 	Player player;
@@ -180,6 +183,7 @@ int main()
 		// Destructible props: barrels / crates / kegs from prop_* entities (kegs + loot="health" drop a pickup).
 		props.clear();
 		pickups.clear();
+		containers.clear();
 		inventory = Inventory{}; // fresh bag on (re)spawn
 		for (const world::Entity& ent : r.data.entities)
 		{
@@ -220,7 +224,37 @@ int main()
 			props.push_back(d);
 		}
 
-		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies, %d props", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size(), (int)props.size());
+		// Chests: prop_chest entities. Contents from coins/potions/keys count keys; lock>0 = locked.
+		for (const world::Entity& ent : r.data.entities)
+		{
+			if (ent.classname != "prop_chest")
+				continue;
+			Container c;
+			c.position = world::mapToEngine(ent.vec3("origin"));
+			c.position.y += c.height * 0.5f;
+			c.lockId = (int)ent.number("lock", 0.0f);
+			c.locked = c.lockId > 0;
+			const int coins = (int)ent.number("coins", 0.0f);
+			const int potions = (int)ent.number("potions", 0.0f);
+			const int keys = (int)ent.number("keys", 0.0f);
+			if (coins > 0)
+				c.contents.push_back(ItemStack{kItemCoin, coins});
+			if (potions > 0)
+				c.contents.push_back(ItemStack{kItemHealthPotion, potions});
+			if (keys > 0)
+				c.contents.push_back(ItemStack{kItemKey, keys});
+			const Vector3 ch = {c.radius, c.height * 0.5f, c.radius};
+			float y = c.position.y + 1.0f;
+			const float lo = y - 8.0f;
+			while (y > lo && !collision.overlaps(Vector3{c.position.x, y, c.position.z}, ch))
+				y -= 0.05f;
+			while (collision.overlaps(Vector3{c.position.x, y, c.position.z}, ch))
+				y += 0.02f;
+			c.position.y = y;
+			containers.push_back(c);
+		}
+
+		TraceLog(LOG_WARNING, "world: %d meshes, %d collision brushes, %d enemies, %d props, %d chests", (int)geo.meshes.size(), (int)collision.brushCount(), (int)enemies.size(), (int)props.size(), (int)containers.size());
 	};
 
 	loadTuning();
@@ -295,6 +329,9 @@ int main()
 			kickCooldown = 0.7f;
 			kickAnim = kickAnimTime; // trigger the boot-kick animation
 		}
+		const int chestTarget = nearestContainer(containers, player.position, player.yaw, 2.2f); // E to open the nearest facing chest
+		if (IsKeyPressed(KEY_E) && chestTarget >= 0)
+			tryOpenContainer(containers[chestTarget], inventory, pickups);
 		if (shotPath) // auto charge+release so the screenshot catches a mid-swing pose
 		{
 			if (melee.phase == MeleePhase::Idle)
@@ -343,7 +380,15 @@ int main()
 				else
 				{
 					updatePlayer(player, in, collision, tune, config::kFixedDt);
-					resolveActorProps(player.position, tune.radius, tune.height, props); // props block the player
+					{ // props + chests are solid boxes: block from the sides, stand on top (jump onto them)
+						std::vector<SolidBox> solids;
+						for (const Destructible& p : props)
+							if (p.active && !p.broken)
+								solids.push_back(SolidBox{p.position, {p.radius, p.height * 0.5f, p.radius}});
+						for (const Container& c : containers)
+							solids.push_back(SolidBox{c.position, {c.radius, c.height * 0.5f, c.radius}});
+						collideActorBoxes(player.position, player.velocity, player.onGround, Vector3{tune.radius, tune.height * 0.5f, tune.radius}, solids);
+					}
 					jumpMeter.update(player, config::kFixedDt);
 				}
 				updateMelee(melee, weapon, config::kFixedDt * rageSpeedMul(rage, rageTune));                                                                                                   // berserk swings faster
@@ -357,7 +402,10 @@ int main()
 				updateEnemies(enemies, tgt, enemyTune, config::kFixedDt);
 				for (Enemy& e : enemies) // props block enemies too (corner them behind a barrel)
 					if (e.active && e.state != EnemyState::Dead)
+					{
 						resolveActorProps(e.position, e.radius, e.height, props);
+						resolveActorContainers(e.position, e.radius, e.height, containers);
+					}
 				updateRage(rage, rageTune, config::kFixedDt); // decay / run the berserk timer
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);
@@ -420,6 +468,7 @@ int main()
 				DrawCubeWires(box, e.radius * 2.0f, bh, e.radius * 2.0f, Color{40, 40, 45, 255});
 			}
 			enemyBillboards.draw(cam, enemies); // RenderKind::Billboard, depth-sorted + state-tinted
+			drawContainers(containers);
 			drawProps(props, (float)GetTime());
 			drawPickups(pickups, (float)GetTime());
 			EndMode3D();
@@ -463,6 +512,12 @@ int main()
 			if (rage.berserk)
 				DrawText("BERSERK", hx + hw + 10, ry - 3, 20, Color{255, 170, 40, 255});
 			DrawText(TextFormat("Coins %d    Keys %d    Potions %d", itemCount(inventory, kItemCoin), itemCount(inventory, kItemKey), itemCount(inventory, kItemHealthPotion)), hx, ry - 30, 20, Color{230, 220, 185, 255});
+			if (chestTarget >= 0) // "use" prompt for the chest you're facing
+			{
+				const bool needKey = containers[chestTarget].locked && itemCount(inventory, kItemKey) == 0;
+				const char* msg = needKey ? "[E] Locked - need a key" : (containers[chestTarget].locked ? "[E] Unlock" : "[E] Open");
+				DrawText(msg, 520, 470, 24, needKey ? Color{230, 120, 110, 255} : Color{240, 235, 210, 255});
+			}
 		}
 		if (showTelemetry)
 		{

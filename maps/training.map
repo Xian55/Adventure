@@ -155,3 +155,16 @@
 "classname" "prop_keg"
 "origin" "16 -80 0"
 }
+// Chests: an open one with coins, and a locked one (needs the key from the barrel) with a potion + coins.
+{
+"classname" "prop_chest"
+"origin" "-90 -200 0"
+"coins" "12"
+}
+{
+"classname" "prop_chest"
+"origin" "60 -200 0"
+"lock" "1"
+"coins" "8"
+"potions" "2"
+}

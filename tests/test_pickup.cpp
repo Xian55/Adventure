@@ -45,6 +45,21 @@ TEST_CASE("a distant pickup is left alone")
 	CHECK(pickups[0].active);
 }
 
+TEST_CASE("a pickup's count grants a whole stack / heals per unit")
+{
+	Inventory inv;
+	std::vector<Pickup> coins{Pickup{{0, 0.5f, 0}, kItemCoin, true, 10}};
+	float hp = 50.0f;
+	collectPickups(coins, Vector3{0, 0.5f, 0}, inv, hp, 100.0f, 1.0f);
+	CHECK(itemCount(inv, kItemCoin) == 10);
+	CHECK_FALSE(coins[0].active);
+
+	std::vector<Pickup> potions{Pickup{{0, 0.5f, 0}, kItemHealthPotion, true, 2}};
+	hp = 40.0f;
+	collectPickups(potions, Vector3{0, 0.5f, 0}, inv, hp, 100.0f, 1.0f);
+	CHECK(hp == doctest::Approx(90.0)); // 2 x 25
+}
+
 TEST_CASE("a full inventory leaves the pickup in the world")
 {
 	Inventory inv;

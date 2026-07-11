@@ -15,17 +15,21 @@ namespace adventure
 			if (dx * dx + dy * dy + dz * dz > r2)
 				continue;
 
+			const int count = pk.count > 0 ? pk.count : 1;
 			const ItemDef& def = itemDef(pk.itemId);
 			if (def.kind == ItemKind::Consumable)
 			{
-				playerHealth += def.value;
+				playerHealth += def.value * count;
 				if (playerHealth > maxHealth)
 					playerHealth = maxHealth;
 				pk.active = false;
 			}
-			else if (addItem(inv, pk.itemId, 1) > 0) // into the bag; leave it if the bag is full
+			else
 			{
-				pk.active = false;
+				const int added = addItem(inv, pk.itemId, count); // into the bag; a full bag leaves the rest
+				pk.count -= added;
+				if (pk.count <= 0)
+					pk.active = false;
 			}
 		}
 	}
