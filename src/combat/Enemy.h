@@ -31,6 +31,8 @@ namespace adventure
 		float stateTimer = 0.0f;
 		float radius = 0.4f;
 		float height = 1.8f;
+		float burn = 0.0f; // fire DoT time remaining
+		float slow = 0.0f; // frost slow time remaining
 		RenderKind render = RenderKind::Billboard;
 		bool active = true;  // false once despawned
 		bool scored = false; // skill point already awarded for this kill

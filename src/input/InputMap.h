@@ -21,6 +21,7 @@ namespace adventure
 		NextWeapon,
 		SkillMenu,
 		Cast,
+		NextSpell,
 		Count,
 	};
 	constexpr int kActionCount = (int)Action::Count;

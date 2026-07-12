@@ -200,9 +200,26 @@ int main()
 		skillTune.rageBonus = (float)sScript->evalNumber("skills.effects.rageBonus", skillTune.rageBonus);
 		skillTune.speedPerRank = (float)sScript->evalNumber("skills.effects.speedPerRank", skillTune.speedPerRank);
 
-		// Spell data from scripts/spells.lua (the spell set + effects stay in C++).
+		// Spell data from scripts/spells.lua (the spell set + schools + kinds stay in C++).
 		sScript->runFile("scripts/spells.lua");
-		setSpellDef(SPELL_PUSH, (float)sScript->evalNumber("spells.telekinesis.mana", spellDef(SPELL_PUSH).manaCost), (float)sScript->evalNumber("spells.telekinesis.power", spellDef(SPELL_PUSH).power), (float)sScript->evalNumber("spells.telekinesis.range", spellDef(SPELL_PUSH).range));
+		const struct
+		{
+			int id;
+			const char* key;
+		} spellRows[] = {
+		    {SPELL_TELEKINESIS, "telekinesis"},
+		    {SPELL_FIREBALL, "fireball"},
+		    {SPELL_FROSTBOLT, "frostbolt"},
+		    {SPELL_LIGHTNING, "lightning"},
+		    {SPELL_QUAKE, "quake"},
+		    {SPELL_HEAL, "heal"},
+		};
+		for (const auto& sr : spellRows)
+		{
+			const SpellDef& cur = spellDef(sr.id);
+			const std::string k = std::string("spells.") + sr.key;
+			setSpellDef(sr.id, (float)sScript->evalNumber(k + ".mana", cur.manaCost), (float)sScript->evalNumber(k + ".power", cur.power), (float)sScript->evalNumber(k + ".range", cur.range));
+		}
 	};
 
 	// --- Map (hot-reloadable: F6) ---
@@ -437,6 +454,7 @@ int main()
 	float bobPhase = 0.0f;
 	bool showSkills = false; // skill-tree overlay open (pauses the sim)
 	int skillSel = 0;
+	int selectedSpell = SPELL_TELEKINESIS;
 
 	std::vector<float> frameSamples;
 	if (profiling)
@@ -521,10 +539,13 @@ int main()
 			kickCooldown = 0.7f;
 			kickAnim = kickAnimTime; // trigger the boot-kick animation
 		}
-		if (actionPressed(keys, Action::Cast) && !showSkills) // Telekinesis: ranged force-push (into hazards)
+		if (actionPressed(keys, Action::NextSpell) && !showSkills) // cycle the spellbook
+			selectedSpell = (selectedSpell + 1) % SPELL_COUNT;
+		if (actionPressed(keys, Action::Cast) && !showSkills) // cast the selected spell
 		{
 			const Vector3 eye = {player.position.x, player.position.y + tune.eyeHeight - tune.height * 0.5f, player.position.z};
-			castPush(mana, spellDef(SPELL_PUSH), eye, player.yaw, enemies, enemyTune);
+			const Vector3 aim = {sinf(player.yaw) * cosf(player.pitch), sinf(player.pitch), -cosf(player.yaw) * cosf(player.pitch)};
+			castSpell(mana, spellDef(selectedSpell), eye, aim, enemies, bolts, player.health, player.maxHealth, enemyTune);
 		}
 		if (actionPressed(keys, Action::NextWeapon)) // cycle the weapons you hold
 		{
@@ -646,7 +667,7 @@ int main()
 				applyHazards(enemies, hazards, enemyTune, config::kFixedDt);
 				updateProps(props, propTune, config::kFixedDt);
 				updateProjectiles(bolts, 2.0f, config::kFixedDt); // fast + nearly flat (small drop)
-				resolveProjectileHits(bolts, enemies, enemyTune);
+				resolveProjectileHits(bolts, enemies, enemyTune, &props, &pickups, &propTune);
 				for (Projectile& b : bolts) // a bolt that hits the world sticks where it lands
 					if (b.active && !b.stuck && collision.overlaps(b.position, Vector3{0.05f, 0.05f, 0.05f}))
 					{
@@ -732,7 +753,7 @@ int main()
 			drawProps(props, (float)GetTime());
 			for (const Projectile& b : bolts) // crossbow bolts
 				if (b.active)
-					DrawCylinderEx(Vector3{b.position.x - b.dir.x * 0.18f, b.position.y - b.dir.y * 0.18f, b.position.z - b.dir.z * 0.18f}, Vector3{b.position.x + b.dir.x * 0.18f, b.position.y + b.dir.y * 0.18f, b.position.z + b.dir.z * 0.18f}, 0.03f, 0.008f, 6, Color{58, 48, 38, 255});
+					DrawCylinderEx(Vector3{b.position.x - b.dir.x * 0.18f, b.position.y - b.dir.y * 0.18f, b.position.z - b.dir.z * 0.18f}, Vector3{b.position.x + b.dir.x * 0.18f, b.position.y + b.dir.y * 0.18f, b.position.z + b.dir.z * 0.18f}, 0.03f, 0.008f, 6, b.color);
 			drawPickups(pickups, (float)GetTime());
 			EndMode3D();
 			if (!noclip)
@@ -795,7 +816,9 @@ int main()
 				const int my = hy + hh + 4;
 				DrawRectangle(hx - 2, my - 2, hw + 4, 12 + 4, Color{20, 15, 15, 220});
 				DrawRectangle(hx, my, (int)(hw * mf), 12, Color{60, 110, 210, 255});
-				DrawText(TextFormat("Mana %d   [%s]", (int)mana.cur, codeName(actionCode(keys, Action::Cast)).c_str()), hx + hw + 10, my - 2, 18, Color{130, 170, 235, 255});
+				DrawText(TextFormat("Mana %d   [%s cast]", (int)mana.cur, codeName(actionCode(keys, Action::Cast)).c_str()), hx + hw + 10, my - 2, 18, Color{130, 170, 235, 255});
+				const SpellDef& sp = spellDef(selectedSpell);
+				DrawText(TextFormat("Spell: %s (%s)  [%s swap]", sp.name, schoolName(sp.school), codeName(actionCode(keys, Action::NextSpell)).c_str()), hx, my + 18, 18, schoolColor(sp.school));
 			}
 			const int ry = hy - 22;
 			const float rf = rageFraction(rage, rageTune);

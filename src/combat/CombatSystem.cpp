@@ -38,6 +38,21 @@ namespace adventure
 			e.velocity.x *= damp;
 			e.velocity.z *= damp;
 
+			// Status effects: fire burns over time, frost slows movement.
+			if (e.state != EnemyState::Dead && e.burn > 0.0f)
+			{
+				e.burn -= dt;
+				e.health -= 8.0f * dt;
+				if (e.health <= 0.0f)
+				{
+					e.state = EnemyState::Dead;
+					e.stateTimer = t.deathTime;
+				}
+			}
+			if (e.slow > 0.0f)
+				e.slow -= dt;
+			const float moveSpeed = e.slow > 0.0f ? t.moveSpeed * 0.45f : t.moveSpeed;
+
 			const float tx = player.pos.x - e.position.x;
 			const float tz = player.pos.z - e.position.z;
 			const float d = std::sqrt(tx * tx + tz * tz);
@@ -54,8 +69,8 @@ namespace adventure
 				}
 				else if (d > 0.0001f)
 				{
-					e.position.x += (tx / d) * t.moveSpeed * dt;
-					e.position.z += (tz / d) * t.moveSpeed * dt;
+					e.position.x += (tx / d) * moveSpeed * dt;
+					e.position.z += (tz / d) * moveSpeed * dt;
 				}
 				break;
 			case EnemyState::Windup:

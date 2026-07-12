@@ -36,6 +36,27 @@ TEST_CASE("a bolt damages the enemy it hits, then is spent")
 	CHECK_FALSE(shots[0].active); // spent
 }
 
+TEST_CASE("a bolt that misses enemies smashes a destructible prop and drops its loot")
+{
+	EnemyTuning t;
+	PropTuning pt;
+	std::vector<Enemy> es; // no enemies
+	std::vector<Destructible> props(1);
+	props[0].position = {0, 0.5f, 0};
+	props[0].health = props[0].maxHealth = 20.0f;
+	props[0].dropItem = kItemCoin;
+	std::vector<Pickup> loot;
+	std::vector<Projectile> shots(1);
+	shots[0].position = {0, 0.5f, 0}; // on the prop
+	shots[0].damage = 30.0f;
+
+	resolveProjectileHits(shots, es, t, &props, &loot, &pt);
+	CHECK(props[0].broken);
+	CHECK_FALSE(shots[0].active); // spent on the prop
+	REQUIRE(loot.size() == 1);
+	CHECK(loot[0].itemId == kItemCoin);
+}
+
 TEST_CASE("a lethal bolt kills; a missing bolt does nothing")
 {
 	EnemyTuning t;

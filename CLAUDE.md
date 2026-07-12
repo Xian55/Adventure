@@ -16,7 +16,7 @@ trees** (`src/rpg`), Lua data pass (items/weapons/skills → `scripts/`), and **
 (`combat/Projectile` crossbow; `combat/Spell` Telekinesis force-push + mana). Weapons: sword/dagger/mace
 (melee) + crossbow (ranged), swap with Q; R casts Telekinesis. Real sprite art still deferred. Controls: WASD + mouse-look, Shift sprint, Space
 jump, Ctrl crouch, **hold Left-click to wind up + WASD to aim (A/D slash, W thrust, S overhead) + release to
-strike**, F kick (knockback), **hold Right-click to block**, **E open/unlock chest**, **Q swap weapon**, **K skill tree** (spend points from kills), **R cast Telekinesis** (mana). Dev tools: F3 metrics,
+strike**, F kick (knockback), **hold Right-click to block**, **E open/unlock chest**, **Q swap weapon**, **K skill tree** (spend points from kills), **R cast spell**, **X cycle spellbook** (Telekinesis/Fireball/Frostbolt/Lightning/Quake/Heal). Dev tools: F3 metrics,
 F4 telemetry (jump/dims/pos), **V noclip-fly**, **F5 hot-reload tuning**, **F6 hot-reload map**, **B toggle
 enemy box/billboard**. `func_door`/`lever`/`func_plate` map entities wire doors by `target`/`targetname`. Default map `maps/training.map`; override
 with `ADVENTURE_MAP` (loads real Quake/Arcane-Dimensions `.map` too); `tools/gen_room.py`/`gen_training.py`
